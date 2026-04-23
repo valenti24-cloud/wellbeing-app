@@ -76,6 +76,7 @@ function AIAdvice({ prompt, context, trigger }) {
 
   const getAdvice = async () => {
     if (shown) { setShown(false); setAdvice(""); return; }
+    if (!apiKey) { setShown(true); setAdvice("⚠ Please set your API key first — tap the button in the top right corner."); return; }
     setLoading(true);
     setShown(true);
     try {
@@ -90,9 +91,13 @@ function AIAdvice({ prompt, context, trigger }) {
         })
       });
       const data = await response.json();
-      setAdvice(data.content?.[0]?.text || "Unable to get advice right now.");
-    } catch {
-      setAdvice("Could not connect to advisor. Please try again.");
+      if (data.error) {
+        setAdvice("API Error: " + data.error.message);
+      } else {
+        setAdvice(data.content?.[0]?.text || "Unable to get advice right now.");
+      }
+    } catch (err) {
+      setAdvice("Error: " + (err.message || "Could not connect. Check your API key is set correctly."));
     }
     setLoading(false);
   };
