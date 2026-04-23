@@ -66,7 +66,6 @@ const BREATHING_EXERCISES = [
   { id: "coherent", name: "Coherent Breathing", desc: "5-5 rhythm. Balances heart rate variability.", phases: ["Inhale", "Exhale"], duration: 5, best: "During Day" },
 ];
 
-
 const ApiKeyContext = React.createContext("");
 
 function AIAdvice({ prompt, context, trigger }) {
@@ -120,7 +119,6 @@ function AIAdvice({ prompt, context, trigger }) {
         </div>
       )}
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -174,7 +172,6 @@ function MorningSection({ data, setData }) {
         trigger="morning"
       />
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -373,7 +370,6 @@ function SupplementsSection({ data, setData }) {
         trigger="supplements"
       />
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -433,7 +429,6 @@ function NutritionSection({ data, setData }) {
         trigger="nutrition"
       />
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -637,7 +632,6 @@ function BreathingSection({ data, setData }) {
         </div>
       )}
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -731,7 +725,6 @@ function EveningSection({ data, setData }) {
         trigger="evening"
       />
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -764,7 +757,6 @@ function ReflectionSection({ data, setData }) {
         trigger="reflection"
       />
     </div>
-    </ApiKeyContext.Provider>
   );
 }
 
@@ -783,16 +775,14 @@ export default function WellbeingCompanion() {
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   const todayKey = new Date().toISOString().split("T")[0];
 
-  // Load today's data from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem(`wb_data_${todayKey}`);
+    const saved = localStorage.getItem("wb_data_" + todayKey);
     if (saved) setSectionData(JSON.parse(saved));
   }, []);
 
-  // Save data to localStorage whenever it changes
   useEffect(() => {
     if (Object.keys(sectionData).length > 0) {
-      localStorage.setItem(`wb_data_${todayKey}`, JSON.stringify(sectionData));
+      localStorage.setItem("wb_data_" + todayKey, JSON.stringify(sectionData));
     }
   }, [sectionData]);
 
@@ -829,7 +819,7 @@ export default function WellbeingCompanion() {
           </div>
           <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
             <div style={{ fontSize: 28 }}>🌿</div>
-            <button onClick={() => setShowKeyInput(v => !v)} style={{ fontSize: 10, background: apiKey ? "rgba(52,211,153,0.15)" : "rgba(239,68,68,0.15)", border: `1px solid ${apiKey ? "rgba(52,211,153,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 6, padding: "2px 8px", color: apiKey ? "#34d399" : "#f87171", cursor: "pointer", letterSpacing: 0.5 }}>
+            <button onClick={() => setShowKeyInput(v => !v)} style={{ fontSize: 10, background: apiKey ? "rgba(52,211,153,0.15)" : "rgba(239,68,68,0.15)", border: "1px solid " + (apiKey ? "rgba(52,211,153,0.3)" : "rgba(239,68,68,0.3)"), borderRadius: 6, padding: "2px 8px", color: apiKey ? "#34d399" : "#f87171", cursor: "pointer" }}>
               {apiKey ? "✓ AI ready" : "⚠ Set API key"}
             </button>
           </div>
@@ -838,11 +828,10 @@ export default function WellbeingCompanion() {
           <div style={{ marginBottom: 16, padding: 14, background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ color: "#94a3b8", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Anthropic API Key</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <input type="password" value={apiKey} onChange={e => saveApiKey(e.target.value)}
-                placeholder="sk-ant-..." style={{ ...textareaStyle, flex: 1, padding: "8px 12px", fontSize: 13 }} />
-              <button onClick={() => setShowKeyInput(false)} style={{ ...ghostBtn, padding: "8px 14px" }}>Save</button>
+              <input type="password" value={apiKey} onChange={e => saveApiKey(e.target.value)} placeholder="sk-ant-..." style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 12px", color: "#e2e8f0", fontSize: 13, outline: "none" }} />
+              <button onClick={() => setShowKeyInput(false)} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>Save</button>
             </div>
-            <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>Get your key at console.anthropic.com · Stored locally on your device only</div>
+            <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>Get your key at console.anthropic.com · Stored only on your device</div>
           </div>
         )}
 
