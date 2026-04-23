@@ -84,7 +84,7 @@ function AIAdvice({ prompt, context, trigger }) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5",
           max_tokens: 1000,
           system: "You are a warm, knowledgeable wellbeing coach. Give concise, actionable, science-backed advice in 2-4 short paragraphs. Be encouraging, personal, and practical. No bullet points. No markdown headers. Write like a trusted friend who happens to be an expert.",
           messages: [{ role: "user", content: `${prompt}\n\nUser data: ${JSON.stringify(context)}` }]
