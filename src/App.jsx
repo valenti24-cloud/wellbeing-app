@@ -150,6 +150,30 @@ function MorningSection({ data, setData }) {
           setTimerActive(false);
           setTimerDone(true);
           try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); } catch(e) {}
+          // Bell sound
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const playBell = (time, freq, decay) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              const osc2 = ctx.createOscillator();
+              const gain2 = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc2.connect(gain2); gain2.connect(ctx.destination);
+              osc.type = "sine"; osc.frequency.setValueAtTime(freq, time);
+              osc2.type = "sine"; osc2.frequency.setValueAtTime(freq * 2.756, time);
+              gain.gain.setValueAtTime(0.6, time);
+              gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
+              gain2.gain.setValueAtTime(0.2, time);
+              gain2.gain.exponentialRampToValueAtTime(0.001, time + decay * 0.6);
+              osc.start(time); osc.stop(time + decay);
+              osc2.start(time); osc2.stop(time + decay * 0.6);
+            };
+            const now = ctx.currentTime;
+            playBell(now, 528, 3.5);
+            playBell(now + 1.2, 528, 3.5);
+            playBell(now + 2.4, 528, 4.0);
+          } catch(e) {}
           return 0;
         }
         return t - 1;
