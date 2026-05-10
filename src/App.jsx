@@ -128,83 +128,61 @@ function AIAdvice({ prompt, context, trigger }) {
 }
 
 function MorningSection({ data, setData }) {
+  const TIMER_DURATION = 5 * 60;
   const [timerActive, setTimerActive] = React.useState(false);
-  const [timerLeft, setTimerLeft] = React.useState(5 * 60);
+  const [timerLeft, setTimerLeft] = React.useState(TIMER_DURATION);
   const [timerDone, setTimerDone] = React.useState(false);
   const timerRef = React.useRef(null);
-  const audioCtxRef = React.useRef(null);
+  const endTimeRef = React.useRef(null);
+  const bellRef = React.useRef(null);
 
-  // Must create & resume AudioContext on user gesture (iOS requirement)
-  const unlockAudio = () => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtxRef.current.state === "suspended") {
-      audioCtxRef.current.resume();
-    }
-    // Play a silent buffer to fully unlock iOS audio
-    const buf = audioCtxRef.current.createBuffer(1, 1, 22050);
-    const src = audioCtxRef.current.createBufferSource();
-    src.buffer = buf;
-    src.connect(audioCtxRef.current.destination);
-    src.start(0);
-  };
+  // Preload bell audio on first render
+  React.useEffect(() => {
+    bellRef.current = new Audio("/bell.wav");
+    bellRef.current.preload = "auto";
+    bellRef.current.load();
+    return () => clearInterval(timerRef.current);
+  }, []);
 
   const playBell = () => {
     try {
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
-      const ring = (time, freq, decay) => {
-        const osc = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const gain2 = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc2.connect(gain2); gain2.connect(ctx.destination);
-        osc.type = "sine"; osc.frequency.setValueAtTime(freq, time);
-        osc2.type = "sine"; osc2.frequency.setValueAtTime(freq * 2.756, time);
-        gain.gain.setValueAtTime(0.7, time);
-        gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
-        gain2.gain.setValueAtTime(0.25, time);
-        gain2.gain.exponentialRampToValueAtTime(0.001, time + decay * 0.5);
-        osc.start(time); osc.stop(time + decay);
-        osc2.start(time); osc2.stop(time + decay * 0.5);
-      };
-      const now = ctx.currentTime;
-      ring(now, 528, 3.5);
-      ring(now + 1.4, 528, 3.5);
-      ring(now + 2.8, 528, 4.5);
+      if (bellRef.current) {
+        bellRef.current.currentTime = 0;
+        bellRef.current.play().catch(() => {});
+      }
     } catch(e) {}
+    try { if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]); } catch(e) {}
   };
 
   const startTimer = () => {
     if (timerActive) {
       clearInterval(timerRef.current);
       setTimerActive(false);
-      setTimerLeft(5 * 60);
+      setTimerLeft(TIMER_DURATION);
       setTimerDone(false);
+      endTimeRef.current = null;
       return;
     }
-    // Unlock audio on this tap gesture — iOS requires it
-    unlockAudio();
+    // Touch the audio on user gesture so iOS allows playback later
+    try {
+      bellRef.current.play().then(() => bellRef.current.pause()).catch(() => {});
+    } catch(e) {}
+
+    endTimeRef.current = Date.now() + TIMER_DURATION * 1000;
     setTimerActive(true);
     setTimerDone(false);
-    timerRef.current = setInterval(() => {
-      setTimerLeft(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current);
-          setTimerActive(false);
-          setTimerDone(true);
-          try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); } catch(e) {}
-          playBell();
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-  };
 
-  React.useEffect(() => () => clearInterval(timerRef.current), []);
+    timerRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+      setTimerLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timerRef.current);
+        setTimerActive(false);
+        setTimerDone(true);
+        playBell();
+      }
+    }, 500);
+  };
 
   const mins = String(Math.floor(timerLeft / 60)).padStart(2, "0");
   const secs = String(timerLeft % 60).padStart(2, "0");
