@@ -128,8 +128,117 @@ function AIAdvice({ prompt, context, trigger }) {
 }
 
 function MorningSection({ data, setData }) {
+  const [timerActive, setTimerActive] = React.useState(false);
+  const [timerLeft, setTimerLeft] = React.useState(5 * 60);
+  const [timerDone, setTimerDone] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  const startTimer = () => {
+    if (timerActive) {
+      clearInterval(timerRef.current);
+      setTimerActive(false);
+      setTimerLeft(5 * 60);
+      setTimerDone(false);
+      return;
+    }
+    setTimerActive(true);
+    setTimerDone(false);
+    timerRef.current = setInterval(() => {
+      setTimerLeft(t => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          setTimerActive(false);
+          setTimerDone(true);
+          try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); } catch(e) {}
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  React.useEffect(() => () => clearInterval(timerRef.current), []);
+
+  const mins = String(Math.floor(timerLeft / 60)).padStart(2, "0");
+  const secs = String(timerLeft % 60).padStart(2, "0");
+  const progress = ((5 * 60 - timerLeft) / (5 * 60)) * 100;
+
   return (
     <div>
+      {/* Morning rituals */}
+      <p style={labelStyle}>Morning Rituals</p>
+
+      {/* Water check */}
+      <button onClick={() => setData({ ...data, water: !data.water })} style={{
+        width: "100%", padding: "14px 16px", borderRadius: 14, textAlign: "left",
+        background: data.water ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)",
+        border: data.water ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(255,255,255,0.08)",
+        cursor: "pointer", display: "flex", alignItems: "center", gap: 14,
+        marginBottom: 12, transition: "all 0.2s",
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+          background: data.water ? "#34d399" : "transparent",
+          border: data.water ? "none" : "1.5px solid #334155",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 14, transition: "all 0.2s",
+        }}>
+          {data.water ? "✓" : ""}
+        </div>
+        <div>
+          <div style={{ color: data.water ? "#34d399" : "#94a3b8", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+            🍋 Warm water with lime juice
+          </div>
+          <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>1 glass on empty stomach</div>
+        </div>
+      </button>
+
+      {/* Eye mask timer */}
+      <div style={{
+        padding: "14px 16px", borderRadius: 14, marginBottom: 20,
+        background: timerDone ? "rgba(52,211,153,0.12)" : timerActive ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.03)",
+        border: timerDone ? "1px solid rgba(52,211,153,0.4)" : timerActive ? "1px solid rgba(167,139,250,0.3)" : "1px solid rgba(255,255,255,0.08)",
+        transition: "all 0.3s",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: timerActive ? 12 : 0 }}>
+          <div>
+            <div style={{ color: timerDone ? "#34d399" : timerActive ? "#c4b5fd" : "#94a3b8", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+              😌 Warm eye mask
+            </div>
+            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>5 minute timer</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {(timerActive || timerLeft < 5 * 60) && !timerDone && (
+              <div style={{ color: "#c4b5fd", fontSize: 28, fontFamily: "'DM Mono', monospace", fontWeight: 200, letterSpacing: -1 }}>
+                {mins}:{secs}
+              </div>
+            )}
+            {timerDone && (
+              <div style={{ color: "#34d399", fontSize: 22 }}>✓ Done!</div>
+            )}
+            <button onClick={startTimer} style={{
+              padding: "8px 16px", borderRadius: 10, fontSize: 12, fontWeight: 600,
+              background: timerActive ? "rgba(239,68,68,0.15)" : timerDone ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg, #a78bfa, #818cf8)",
+              border: timerActive ? "1px solid rgba(239,68,68,0.3)" : "none",
+              color: timerActive ? "#f87171" : timerDone ? "#475569" : "#fff",
+              cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+            }}>
+              {timerActive ? "■ Stop" : timerDone ? "↺ Again" : "▶ Start"}
+            </button>
+          </div>
+        </div>
+        {timerActive && (
+          <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{
+              height: "100%", borderRadius: 99,
+              width: progress + "%",
+              background: "linear-gradient(90deg, #a78bfa, #34d399)",
+              transition: "width 1s linear",
+            }} />
+          </div>
+        )}
+      </div>
+
       <p style={labelStyle}>How are you feeling this morning?</p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
         {["😴 Tired", "😐 Okay", "🙂 Good", "😊 Great", "⚡ Energised"].map(m => (
