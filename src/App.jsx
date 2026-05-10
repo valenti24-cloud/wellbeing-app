@@ -182,9 +182,10 @@ function MorningSection({ data, setData }) {
 
 function SupplementsSection({ data, setData }) {
   const [editMode, setEditMode] = useState(false);
-  const [editedSchedule, setEditedSchedule] = useState(null);
   const [schedule, setSchedule] = useState(SUPPLEMENT_SCHEDULE);
-  const [pendingChanges, setPendingChanges] = useState({});
+  // Use a ref for edits so typing doesn't cause re-renders that steal focus
+  const editRef = React.useRef(null);
+  const [editVersion, setEditVersion] = useState(0);
 
   const taken = data.taken || [];
 
@@ -196,51 +197,38 @@ function SupplementsSection({ data, setData }) {
   const totalTaken = Object.values(schedule).reduce((s, g) => s + g.items.filter(i => taken.includes(i.id)).length, 0);
 
   const startEdit = () => {
-    setEditedSchedule(JSON.parse(JSON.stringify(schedule)));
-    setPendingChanges({});
+    editRef.current = JSON.parse(JSON.stringify(schedule));
     setEditMode(true);
+    setEditVersion(0);
   };
 
   const updateItem = (groupKey, itemIdx, field, value) => {
-    const s = JSON.parse(JSON.stringify(editedSchedule));
-    const original = schedule[groupKey].items[itemIdx][field];
-    s[groupKey].items[itemIdx][field] = value;
-    setEditedSchedule(s);
-    const key = `${groupKey}-${itemIdx}-${field}`;
-    if (value !== original) {
-      setPendingChanges(p => ({ ...p, [key]: { groupKey, itemIdx, field, from: original, to: value } }));
-    } else {
-      setPendingChanges(p => { const n = { ...p }; delete n[key]; return n; });
-    }
+    // Update ref directly — no re-render, no focus loss
+    editRef.current[groupKey].items[itemIdx][field] = value;
   };
 
   const addItem = (groupKey) => {
-    const s = JSON.parse(JSON.stringify(editedSchedule));
-    const newId = `custom_${Date.now()}`;
-    s[groupKey].items.push({ id: newId, name: "", dose: "" });
-    setEditedSchedule(s);
+    const newId = "custom_" + Date.now();
+    editRef.current[groupKey].items.push({ id: newId, name: "", dose: "" });
+    setEditVersion(v => v + 1); // trigger re-render to show new row
   };
 
   const removeItem = (groupKey, itemIdx) => {
-    const s = JSON.parse(JSON.stringify(editedSchedule));
-    s[groupKey].items.splice(itemIdx, 1);
-    setEditedSchedule(s);
-    setPendingChanges(p => ({ ...p, [`removed-${groupKey}-${itemIdx}`]: true }));
+    editRef.current[groupKey].items.splice(itemIdx, 1);
+    setEditVersion(v => v + 1);
   };
 
   const saveChanges = () => {
-    setSchedule(editedSchedule);
+    setSchedule(JSON.parse(JSON.stringify(editRef.current)));
     setEditMode(false);
-    setPendingChanges({});
   };
 
   const cancelEdit = () => {
     setEditMode(false);
-    setEditedSchedule(null);
-    setPendingChanges({});
+    editRef.current = null;
   };
 
-  const changeCount = Object.keys(pendingChanges).length;
+  const editedSchedule = editRef.current;
 
   return (
     <div>
@@ -268,21 +256,16 @@ function SupplementsSection({ data, setData }) {
       {editMode && (
         <div style={{ marginBottom: 20, padding: 16, background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 16, animation: "fadeIn 0.3s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div>
-              <div style={{ color: "#fbbf24", fontSize: 13, fontWeight: 600 }}>✎ Editing your schedule</div>
-              {changeCount > 0 && (
-                <div style={{ color: "#f59e0b", fontSize: 11, marginTop: 2 }}>{changeCount} unsaved change{changeCount > 1 ? "s" : ""}</div>
-              )}
-            </div>
+            <div style={{ color: "#fbbf24", fontSize: 13, fontWeight: 600 }}>✎ Editing your schedule</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={cancelEdit} style={{ ...ghostBtn, fontSize: 12 }}>Cancel</button>
               <button onClick={saveChanges} style={{
                 padding: "7px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600,
-                background: changeCount > 0 ? "linear-gradient(135deg, #a78bfa, #818cf8)" : "rgba(255,255,255,0.06)",
-                border: "none", color: changeCount > 0 ? "#fff" : "#475569", cursor: "pointer",
+                background: "linear-gradient(135deg, #a78bfa, #818cf8)",
+                border: "none", color: "#fff", cursor: "pointer",
                 fontFamily: "'DM Sans', sans-serif"
               }}>
-                {changeCount > 0 ? `Save ${changeCount} change${changeCount > 1 ? "s" : ""}` : "Save"}
+                Save
               </button>
             </div>
           </div>
@@ -294,10 +277,10 @@ function SupplementsSection({ data, setData }) {
               </div>
               {group.items.map((item, idx) => (
                 <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, marginBottom: 6 }}>
-                  <input value={item.name}
+                  <input defaultValue={item.name}
                     onChange={e => updateItem(groupKey, idx, "name", e.target.value)}
                     style={{ ...textareaStyle, padding: "8px 10px", fontSize: 12 }} />
-                  <input value={item.dose}
+                  <input defaultValue={item.dose}
                     onChange={e => updateItem(groupKey, idx, "dose", e.target.value)}
                     style={{ ...textareaStyle, padding: "8px 10px", fontSize: 12 }} />
                   <button onClick={() => removeItem(groupKey, idx)} style={{
