@@ -132,26 +132,55 @@ function MorningSection({ data, setData }) {
   const [timerActive, setTimerActive] = React.useState(false);
   const [timerLeft, setTimerLeft] = React.useState(TIMER_DURATION);
   const [timerDone, setTimerDone] = React.useState(false);
+  const [endTimeDisplay, setEndTimeDisplay] = React.useState("");
   const timerRef = React.useRef(null);
   const endTimeRef = React.useRef(null);
-  const bellRef = React.useRef(null);
+  const audioCtxRef = React.useRef(null);
+  const bellPlayedRef = React.useRef(false);
 
-  // Preload bell audio on first render
-  React.useEffect(() => {
-    bellRef.current = new Audio("/bell.wav");
-    bellRef.current.preload = "auto";
-    bellRef.current.load();
-    return () => clearInterval(timerRef.current);
-  }, []);
+  React.useEffect(() => () => clearInterval(timerRef.current), []);
+
+  // iOS-safe bell: uses AudioContext created & resumed on the START tap gesture
+  const initAudio = () => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume();
+      }
+    } catch(e) {}
+  };
 
   const playBell = () => {
     try {
-      if (bellRef.current) {
-        bellRef.current.currentTime = 0;
-        bellRef.current.play().catch(() => {});
-      }
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      if (ctx.state === "suspended") ctx.resume();
+      const ring = (delayS) => {
+        const osc = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        const g2 = ctx.createGain();
+        osc.connect(g1); g1.connect(ctx.destination);
+        osc2.connect(g2); g2.connect(ctx.destination);
+        const t = ctx.currentTime + delayS;
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(528, t);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(528 * 2.756, t);
+        g1.gain.setValueAtTime(0.0001, t);
+        g1.gain.linearRampToValueAtTime(0.8, t + 0.02);
+        g1.gain.exponentialRampToValueAtTime(0.0001, t + 4.0);
+        g2.gain.setValueAtTime(0.0001, t);
+        g2.gain.linearRampToValueAtTime(0.3, t + 0.02);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t + 2.0);
+        osc.start(t); osc.stop(t + 4.1);
+        osc2.start(t); osc2.stop(t + 2.1);
+      };
+      ring(0); ring(1.5); ring(3.0);
     } catch(e) {}
-    try { if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]); } catch(e) {}
+    try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
   };
 
   const startTimer = () => {
@@ -160,22 +189,37 @@ function MorningSection({ data, setData }) {
       setTimerActive(false);
       setTimerLeft(TIMER_DURATION);
       setTimerDone(false);
+      setEndTimeDisplay("");
       endTimeRef.current = null;
+      bellPlayedRef.current = false;
       return;
     }
-    // Touch the audio on user gesture so iOS allows playback later
-    try {
-      bellRef.current.play().then(() => bellRef.current.pause()).catch(() => {});
-    } catch(e) {}
 
-    endTimeRef.current = Date.now() + TIMER_DURATION * 1000;
+    // Init audio on this tap — the ONLY way iOS allows it
+    initAudio();
+    bellPlayedRef.current = false;
+
+    // Calculate real end time
+    const endMs = Date.now() + TIMER_DURATION * 1000;
+    endTimeRef.current = endMs;
+
+    // Show end time as real clock time e.g. "5:01 PM"
+    const endDate = new Date(endMs);
+    const hrs = endDate.getHours();
+    const mins = String(endDate.getMinutes()).padStart(2, "0");
+    const ampm = hrs >= 12 ? "PM" : "AM";
+    const displayHr = hrs % 12 || 12;
+    setEndTimeDisplay(`${displayHr}:${mins} ${ampm}`);
+
     setTimerActive(true);
     setTimerDone(false);
 
+    // Poll every 500ms using real clock — survives screen lock
     timerRef.current = setInterval(() => {
       const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
       setTimerLeft(remaining);
-      if (remaining <= 0) {
+      if (remaining <= 0 && !bellPlayedRef.current) {
+        bellPlayedRef.current = true;
         clearInterval(timerRef.current);
         setTimerActive(false);
         setTimerDone(true);
@@ -230,16 +274,19 @@ function MorningSection({ data, setData }) {
             <div style={{ color: timerDone ? "#34d399" : timerActive ? "#c4b5fd" : "#94a3b8", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
               😌 Warm eye mask
             </div>
-            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>5 minute timer</div>
+            {timerActive && endTimeDisplay
+              ? <div style={{ color: "#a78bfa", fontSize: 11, marginTop: 2 }}>Ends at {endTimeDisplay}</div>
+              : <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>5 minute timer</div>
+            }
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {(timerActive || timerLeft < 5 * 60) && !timerDone && (
-              <div style={{ color: "#c4b5fd", fontSize: 28, fontFamily: "'DM Mono', monospace", fontWeight: 200, letterSpacing: -1 }}>
+            {timerActive && (
+              <div style={{ color: "#c4b5fd", fontSize: 30, fontFamily: "'DM Mono', monospace", fontWeight: 200, letterSpacing: -1 }}>
                 {mins}:{secs}
               </div>
             )}
             {timerDone && (
-              <div style={{ color: "#34d399", fontSize: 22 }}>✓ Done!</div>
+              <div style={{ color: "#34d399", fontSize: 20 }}>✓ Done!</div>
             )}
             <button onClick={startTimer} style={{
               padding: "8px 16px", borderRadius: 10, fontSize: 12, fontWeight: 600,
