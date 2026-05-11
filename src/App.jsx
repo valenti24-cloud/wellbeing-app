@@ -363,7 +363,12 @@ function MorningSection({ data, setData }) {
 
 function SupplementsSection({ data, setData }) {
   const [editMode, setEditMode] = useState(false);
-  const [schedule, setSchedule] = useState(SUPPLEMENT_SCHEDULE);
+  const [schedule, setSchedule] = useState(() => {
+    try {
+      const saved = localStorage.getItem("wb_supplement_schedule");
+      return saved ? JSON.parse(saved) : SUPPLEMENT_SCHEDULE;
+    } catch(e) { return SUPPLEMENT_SCHEDULE; }
+  });
   // Use a ref for edits so typing doesn't cause re-renders that steal focus
   const editRef = React.useRef(null);
   const [editVersion, setEditVersion] = useState(0);
@@ -400,7 +405,9 @@ function SupplementsSection({ data, setData }) {
   };
 
   const saveChanges = () => {
-    setSchedule(JSON.parse(JSON.stringify(editRef.current)));
+    const updated = JSON.parse(JSON.stringify(editRef.current));
+    setSchedule(updated);
+    try { localStorage.setItem("wb_supplement_schedule", JSON.stringify(updated)); } catch(e) {}
     setEditMode(false);
   };
 
