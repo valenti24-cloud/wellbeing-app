@@ -550,58 +550,107 @@ function SupplementsSection({ data, setData }) {
 }
 
 function NutritionSection({ data, setData }) {
-  const meals = data.meals || [{ name: "", calories: "", protein: "" }];
+  // Defaults tuned for woman, 45yo, office worker, training 4-5x/week
+  // Calories: 1900 kcal maintenance with active lifestyle
+  // Protein: 130g (high for muscle preservation & hormonal health)
+  // Sugar: 25g (WHO max for women)
+  const DEFAULT_CAL  = 1900;
+  const DEFAULT_PROT = 130;
+  const DEFAULT_SUG  = 25;
+
+  const meals = data.meals || [{ name: "", calories: "", protein: "", sugar: "" }];
+
   const updateMeal = (i, field, val) => {
     const m = [...meals]; m[i] = { ...m[i], [field]: val }; setData({ ...data, meals: m });
   };
-  const addMeal = () => setData({ ...data, meals: [...meals, { name: "", calories: "", protein: "" }] });
+  const addMeal = () => setData({ ...data, meals: [...meals, { name: "", calories: "", protein: "", sugar: "" }] });
+  const removeMeal = (i) => setData({ ...data, meals: meals.filter((_, idx) => idx !== i) });
+
   const totalCals = meals.reduce((s, m) => s + (parseInt(m.calories) || 0), 0);
   const totalProt = meals.reduce((s, m) => s + (parseInt(m.protein) || 0), 0);
+  const totalSugar = meals.reduce((s, m) => s + (parseInt(m.sugar) || 0), 0);
+
+  const calGoal  = parseInt(data.calGoal)  || DEFAULT_CAL;
+  const protGoal = parseInt(data.protGoal) || DEFAULT_PROT;
+  const sugGoal  = parseInt(data.sugGoal)  || DEFAULT_SUG;
+
+  const calPct  = Math.min((totalCals  / calGoal)  * 100, 100);
+  const protPct = Math.min((totalProt  / protGoal)  * 100, 100);
+  const sugPct  = Math.min((totalSugar / sugGoal)   * 100, 100);
+
+  const calColor  = totalCals  > calGoal  * 1.1 ? "#f87171" : totalCals  >= calGoal  * 0.85 ? "#34d399" : "#f59e0b";
+  const protColor = totalProt  >= protGoal * 0.9 ? "#34d399" : totalProt  >= protGoal * 0.6  ? "#f59e0b" : "#f87171";
+  const sugColor  = totalSugar > sugGoal          ? "#f87171" : totalSugar > sugGoal  * 0.75 ? "#f59e0b" : "#34d399";
+
+  const StatCard = ({ label, value, unit, goal, goalUnit, pct, color }) => (
+    <div style={{ ...statCard, position: "relative", overflow: "hidden" }}>
+      <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+      <div style={{ color, fontSize: 26, fontFamily: "'DM Mono', monospace", fontWeight: 400, lineHeight: 1 }}>{value}<span style={{ fontSize: 13, marginLeft: 2 }}>{unit}</span></div>
+      <div style={{ color: "#334155", fontSize: 10, marginTop: 4, marginBottom: 8 }}>goal: {goal}{goalUnit}</div>
+      <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 99, transition: "width 0.4s ease" }} />
+      </div>
+    </div>
+  );
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-        <div style={statCard}>
-          <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>CALORIES TODAY</div>
-          <div style={{ color: "#f59e0b", fontSize: 28, fontFamily: "'DM Mono', monospace" }}>{totalCals}</div>
-          <div style={{ color: "#475569", fontSize: 11 }}>goal: {data.calGoal || 2000} kcal</div>
-        </div>
-        <div style={statCard}>
-          <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>PROTEIN TODAY</div>
-          <div style={{ color: "#34d399", fontSize: 28, fontFamily: "'DM Mono', monospace" }}>{totalProt}g</div>
-          <div style={{ color: "#475569", fontSize: 11 }}>goal: {data.protGoal || 150}g</div>
-        </div>
+      {/* Stat cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+        <StatCard label="Calories" value={totalCals} unit="" goal={calGoal} goalUnit=" kcal" pct={calPct} color={calColor} />
+        <StatCard label="Protein"  value={totalProt}  unit="g" goal={protGoal} goalUnit="g" pct={protPct} color={protColor} />
+        <StatCard label="Sugar"    value={totalSugar} unit="g" goal={sugGoal}  goalUnit="g" pct={sugPct}  color={sugColor} />
       </div>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <div style={{ flex: 1 }}>
-          <p style={{ ...labelStyle, marginBottom: 6 }}>Calorie goal</p>
+      {/* Goals row */}
+      <p style={labelStyle}>Daily Goals</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 20 }}>
+        <div>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Calories</div>
           <input type="number" value={data.calGoal || ""} onChange={e => setData({ ...data, calGoal: e.target.value })}
-            placeholder="2000" style={{ ...textareaStyle, padding: "10px 14px" }} />
+            placeholder={String(DEFAULT_CAL)} style={{ ...textareaStyle, padding: "8px 10px", fontSize: 13 }} />
         </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ ...labelStyle, marginBottom: 6 }}>Protein goal (g)</p>
+        <div>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Protein g</div>
           <input type="number" value={data.protGoal || ""} onChange={e => setData({ ...data, protGoal: e.target.value })}
-            placeholder="150" style={{ ...textareaStyle, padding: "10px 14px" }} />
+            placeholder={String(DEFAULT_PROT)} style={{ ...textareaStyle, padding: "8px 10px", fontSize: 13 }} />
+        </div>
+        <div>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Sugar g</div>
+          <input type="number" value={data.sugGoal || ""} onChange={e => setData({ ...data, sugGoal: e.target.value })}
+            placeholder={String(DEFAULT_SUG)} style={{ ...textareaStyle, padding: "8px 10px", fontSize: 13 }} />
         </div>
       </div>
 
+      {/* Meal log — now 4 columns: name | kcal | protein | sugar */}
       <p style={labelStyle}>Meals today</p>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 6, marginBottom: 6 }}>
+        {["Meal", "kcal", "prot g", "sugar g", ""].map((h, i) => (
+          <div key={i} style={{ color: "#334155", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", paddingLeft: 2 }}>{h}</div>
+        ))}
+      </div>
       {meals.map((m, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 6, marginBottom: 8 }}>
           <input value={m.name} onChange={e => updateMeal(i, "name", e.target.value)}
-            placeholder={`Meal ${i + 1}`} style={{ ...textareaStyle, padding: "10px 14px" }} />
+            placeholder={`Meal ${i + 1}`} style={{ ...textareaStyle, padding: "9px 10px", fontSize: 13 }} />
           <input type="number" value={m.calories} onChange={e => updateMeal(i, "calories", e.target.value)}
-            placeholder="kcal" style={{ ...textareaStyle, padding: "10px 14px" }} />
+            placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
           <input type="number" value={m.protein} onChange={e => updateMeal(i, "protein", e.target.value)}
-            placeholder="protein g" style={{ ...textareaStyle, padding: "10px 14px" }} />
+            placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
+          <input type="number" value={m.sugar} onChange={e => updateMeal(i, "sugar", e.target.value)}
+            placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
+          <button onClick={() => removeMeal(i)} style={{
+            width: 32, height: 38, borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)",
+            background: "rgba(239,68,68,0.06)", color: "#f87171", cursor: "pointer", fontSize: 15,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>×</button>
         </div>
       ))}
-      <button onClick={addMeal} style={{ ...ghostBtn, marginBottom: 20 }}>+ Add meal</button>
+      <button onClick={addMeal} style={{ ...ghostBtn, marginBottom: 24 }}>+ Add meal</button>
 
       <AIAdvice
-        prompt="Based on this person's nutrition data today, give personalised diet advice. Comment on their calorie and protein intake vs goals, meal timing, and nutritional balance. Suggest improvements if needed."
-        context={data}
+        prompt="This is a 45-year-old woman, office worker who trains 4-5 times per week. Based on her nutrition today, give personalised advice. Her goals are ~1900 kcal, 130g protein, max 25g sugar. Comment on how she is tracking against each goal, highlight sugar intake especially, and give practical meal suggestions."
+        context={{ totalCals, totalProt, totalSugar, calGoal, protGoal, sugGoal, meals }}
         trigger="nutrition"
       />
     </div>
