@@ -545,37 +545,33 @@ function SupplementsSection({ data, setData }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: 8, borderLeft: `2px solid ${group.color}22` }}>
               {group.items.map(item => {
                 const isTaken = taken.includes(item.id);
+                const onBreak = isOnBreak(item.id);
                 return (
-                  {(() => {
-                    const onBreak = isOnBreak(item.id);
-                    return (
-                      <button key={item.id} onClick={() => toggle(item.id)} style={{
-                        padding: "12px 14px", borderRadius: 12, textAlign: "left",
-                        background: onBreak ? "rgba(248,113,113,0.05)" : isTaken ? `${group.color}18` : "rgba(255,255,255,0.03)",
-                        border: onBreak ? "1px solid rgba(248,113,113,0.2)" : isTaken ? `1px solid ${group.color}55` : "1px solid rgba(255,255,255,0.07)",
-                        cursor: onBreak ? "not-allowed" : "pointer", transition: "all 0.2s", display: "flex", alignItems: "flex-start", gap: 12,
-                        opacity: onBreak ? 0.6 : 1,
-                      }}>
-                        <div style={{
-                          width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
-                          background: onBreak ? "rgba(248,113,113,0.2)" : isTaken ? group.color : "transparent",
-                          border: onBreak ? "1.5px solid #f87171" : isTaken ? "none" : "1.5px solid #334155",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, color: onBreak ? "#f87171" : "#0a0a12", fontWeight: 700, transition: "all 0.2s"
-                        }}>
-                          {onBreak ? "✕" : isTaken ? "✓" : ""}
-                        </div>
-                        <div>
-                          <div style={{ color: onBreak ? "#f87171" : isTaken ? "#e2e8f0" : "#94a3b8", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>
-                            {item.name}
-                          </div>
-                          <div style={{ color: onBreak ? "#f87171" : isTaken ? group.color : "#475569", fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace" }}>
-                            {onBreak ? "⛔ On break — see Reports" : item.dose}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })()}
+                  <button key={item.id} onClick={() => toggle(item.id)} style={{
+                    padding: "12px 14px", borderRadius: 12, textAlign: "left",
+                    background: onBreak ? "rgba(248,113,113,0.05)" : isTaken ? `${group.color}18` : "rgba(255,255,255,0.03)",
+                    border: onBreak ? "1px solid rgba(248,113,113,0.2)" : isTaken ? `1px solid ${group.color}55` : "1px solid rgba(255,255,255,0.07)",
+                    cursor: onBreak ? "not-allowed" : "pointer", transition: "all 0.2s", display: "flex", alignItems: "flex-start", gap: 12,
+                    opacity: onBreak ? 0.6 : 1,
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
+                      background: onBreak ? "rgba(248,113,113,0.2)" : isTaken ? group.color : "transparent",
+                      border: onBreak ? "1.5px solid #f87171" : isTaken ? "none" : "1.5px solid #334155",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 11, color: onBreak ? "#f87171" : "#0a0a12", fontWeight: 700, transition: "all 0.2s"
+                    }}>
+                      {onBreak ? "✕" : isTaken ? "✓" : ""}
+                    </div>
+                    <div>
+                      <div style={{ color: onBreak ? "#f87171" : isTaken ? "#e2e8f0" : "#94a3b8", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>
+                        {item.name}
+                      </div>
+                      <div style={{ color: onBreak ? "#f87171" : isTaken ? group.color : "#475569", fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace" }}>
+                        {onBreak ? "⛔ On break — see Reports" : item.dose}
+                      </div>
+                    </div>
+                  </button>
                 );
               })}
             </div>
