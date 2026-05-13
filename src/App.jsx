@@ -1346,81 +1346,104 @@ function ReportsSection() {
       return Math.floor((now - start) / (1000 * 60 * 60 * 24));
     };
 
-    const getStatus = (item, daysTaken, daysSinceStart) => {
+    const getStatus = (item, daysActive, daysTakenFromLog) => {
       const cycle = SUPPLEMENT_CYCLES[item.id];
       if (!cycle) return null;
       if (cycle.courseDays === -1) return { type: "ongoing", label: "Ongoing", color: "#34d399", detail: cycle.notes };
-      const progress = Math.min((daysTaken / cycle.courseDays) * 100, 100);
-      const daysLeft = Math.max(0, cycle.courseDays - daysTaken);
+      const progress = Math.min((daysActive / cycle.courseDays) * 100, 100);
+      const daysLeft = Math.max(0, cycle.courseDays - daysActive);
       if (daysLeft === 0) {
-        return { type: "break", label: `Take a ${cycle.breakDays}-day break`, color: "#f87171", detail: `Completed ${cycle.courseDays}-day course. Rest for ${cycle.breakDays} days.`, progress: 100 };
+        const breakEndDate = new Date();
+        breakEndDate.setDate(breakEndDate.getDate() + cycle.breakDays);
+        const breakEnd = breakEndDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        return { type: "break", label: `⛔ Take a ${cycle.breakDays}-day break`, color: "#f87171", detail: `Course complete! Rest until ${breakEnd}, then start again.`, progress: 100 };
       }
-      return { type: "active", label: `${daysLeft} days left in course`, color: "#a78bfa", detail: cycle.notes, progress };
+      const pct = Math.round(progress);
+      return { type: "active", label: `${daysLeft} days remaining · ${pct}% of course`, color: "#a78bfa", detail: cycle.notes, progress };
     };
 
     return (
       <div>
-        <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>💊 Supplement Tracker</div>
+        <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>💊 Supplement Tracker</div>
+        <div style={{ color: "#334155", fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
+          Set a start date for each supplement to track your course accurately. Days elapsed = calendar days since you started.
+        </div>
         {uniqueItems.map(item => {
-          const daysTaken = countDaysTaken(item.id);
+          const daysTakenFromLog = countDaysTaken(item.id);
           const startDate = meta[item.id]?.startDate;
           const daysElapsed = daysSince(startDate);
+          // Use elapsed days if start date is set, otherwise fall back to logged days
+          const daysActive = startDate ? (daysElapsed || 0) : daysTakenFromLog;
           const cycle = SUPPLEMENT_CYCLES[item.id];
-          const status = getStatus(item, daysTaken, daysElapsed);
+          const status = getStatus(item, daysActive, daysTakenFromLog);
+          const pctTaken = daysElapsed > 0 ? Math.round((daysTakenFromLog / daysElapsed) * 100) : null;
 
           return (
-            <div key={item.id} style={{ marginBottom: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
-              {/* Name row */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div key={item.id} style={{ marginBottom: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", border: `1px solid ${status?.type === "break" ? "rgba(248,113,113,0.25)" : "rgba(255,255,255,0.07)"}`, borderRadius: 14 }}>
+
+              {/* Name + stats row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div style={{ flex: 1, paddingRight: 10 }}>
                   <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
                   <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{item.dose}</div>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ color: "#a78bfa", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{daysTaken}</div>
-                  <div style={{ color: "#334155", fontSize: 10 }}>days taken</div>
+                <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
+                  {startDate && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ color: "#60a5fa", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{daysElapsed}</div>
+                      <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>elapsed</div>
+                    </div>
+                  )}
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ color: "#a78bfa", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{daysTakenFromLog}</div>
+                    <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>taken</div>
+                  </div>
+                  {pctTaken !== null && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ color: pctTaken >= 80 ? "#34d399" : pctTaken >= 60 ? "#f59e0b" : "#f87171", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{pctTaken}%</div>
+                      <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>adherence</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Progress bar */}
+              {/* Progress bar — based on elapsed days vs course */}
               {status && cycle?.courseDays > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
-                    <div style={{ height: "100%", width: (status.progress || 0) + "%", background: status.color, borderRadius: 99, transition: "width 0.4s ease" }} />
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ color: "#334155", fontSize: 10 }}>Day 1</span>
+                    <span style={{ color: "#334155", fontSize: 10 }}>Day {cycle.courseDays}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#334155", fontSize: 10 }}>0</span>
-                    <span style={{ color: "#334155", fontSize: 10 }}>{cycle.courseDays} days</span>
+                  <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: (status.progress || 0) + "%", background: `linear-gradient(90deg, ${status.color}99, ${status.color})`, borderRadius: 99, transition: "width 0.5s ease" }} />
                   </div>
                 </div>
               )}
 
-              {/* Status badge */}
+              {/* Status badge + detail */}
               {status && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 11, background: status.color + "22", color: status.color, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ padding: "4px 12px", borderRadius: 99, fontSize: 11, background: status.color + "22", color: status.color, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
                     {status.label}
                   </span>
+                  {status.detail && (
+                    <div style={{ color: "#475569", fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>{status.detail}</div>
+                  )}
                 </div>
               )}
 
-              {/* Clinical note */}
-              {status?.detail && (
-                <div style={{ color: "#475569", fontSize: 11, marginBottom: 8, lineHeight: 1.5 }}>{status.detail}</div>
-              )}
-
-              {/* Start date */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              {/* Start date picker */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                 {editingId === item.id ? (
                   <>
                     <input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)}
-                      style={{ ...{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"5px 10px",color:"#e2e8f0",fontSize:12,outline:"none"} }} />
-                    <button onClick={() => setStartDate(item.id, dateInput)} style={{ padding:"4px 12px", borderRadius:8, background:"rgba(167,139,250,0.2)", border:"1px solid rgba(167,139,250,0.3)", color:"#c4b5fd", fontSize:11, cursor:"pointer" }}>Save</button>
-                    <button onClick={() => setEditingId(null)} style={{ padding:"4px 10px", borderRadius:8, background:"transparent", border:"1px solid rgba(255,255,255,0.08)", color:"#475569", fontSize:11, cursor:"pointer" }}>Cancel</button>
+                      style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"6px 10px", color:"#e2e8f0", fontSize:12, outline:"none" }} />
+                    <button onClick={() => setStartDate(item.id, dateInput)} style={{ padding:"5px 14px", borderRadius:8, background:"rgba(167,139,250,0.2)", border:"1px solid rgba(167,139,250,0.3)", color:"#c4b5fd", fontSize:12, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={{ padding:"5px 10px", borderRadius:8, background:"transparent", border:"1px solid rgba(255,255,255,0.08)", color:"#475569", fontSize:12, cursor:"pointer" }}>Cancel</button>
                   </>
                 ) : (
-                  <button onClick={() => { setEditingId(item.id); setDateInput(startDate || today); }} style={{ padding:"4px 12px", borderRadius:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color:"#475569", fontSize:11, cursor:"pointer", fontFamily:"'DM Sans', sans-serif" }}>
-                    {startDate ? `📅 Started ${formatDate(startDate)} · ${daysElapsed}d elapsed` : "📅 Set start date"}
+                  <button onClick={() => { setEditingId(item.id); setDateInput(startDate || today); }} style={{ padding:"4px 12px", borderRadius:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color: startDate ? "#64748b" : "#a78bfa", fontSize:11, cursor:"pointer", fontFamily:"'DM Sans', sans-serif" }}>
+                    {startDate ? `📅 Started ${formatDate(startDate)}` : "📅 Set start date →"}
                   </button>
                 )}
               </div>
