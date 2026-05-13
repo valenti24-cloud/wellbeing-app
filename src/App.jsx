@@ -921,27 +921,112 @@ function EveningSection({ data, setData }) {
         <span style={{ color: "#e2e8f0", fontFamily: "'DM Mono', monospace", fontSize: 18, minWidth: 24 }}>{data.stress || 5}</span>
       </div>
 
-      <p style={labelStyle}>Water intake (glasses)</p>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {[4, 5, 6, 7, 8, 9, 10].map(n => (
-          <button key={n} onClick={() => setData({ ...data, water: n })} style={{
-            width: 40, height: 40, borderRadius: 10, border: data.water === n ? "1px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)",
-            background: data.water === n ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.04)",
-            color: data.water === n ? "#c4b5fd" : "#64748b", fontSize: 13,
-            fontFamily: "'DM Mono', monospace", cursor: "pointer"
-          }}>{n}</button>
-        ))}
+      <p style={labelStyle}>💧 Water intake today</p>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+          <div style={{ position: "relative", flex: 1 }}>
+            <input
+              type="number"
+              step="0.1"
+              value={data.water || ""}
+              onChange={e => setData({ ...data, water: e.target.value })}
+              placeholder="e.g. 2.5"
+              style={{ ...textareaStyle, padding: "12px 40px 12px 14px", fontSize: 20, fontFamily: "'DM Mono', monospace" }}
+            />
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 12, pointerEvents: "none" }}>L</span>
+          </div>
+        </div>
+        {data.water && (() => {
+          const w = parseFloat(data.water);
+          const goal = 2.5;
+          const pct = Math.min((w / goal) * 100, 100);
+          const color = w >= goal ? "#34d399" : w >= 1.8 ? "#a78bfa" : w >= 1.2 ? "#f59e0b" : "#f87171";
+          const label = w >= goal ? "🎯 Goal reached!" : w >= 1.8 ? "💧 Almost there" : w >= 1.2 ? "💧 Keep drinking" : "⚠ Drink more";
+          return (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#475569", fontSize: 11 }}>Daily goal: 2.5 L</span>
+                <span style={{ color, fontSize: 12, fontWeight: 600 }}>{label}</span>
+              </div>
+              <div style={{ height: 5, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 99, transition: "width 0.5s ease" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+                {[0.5, 1.0, 1.5, 2.0, 2.5].map(mark => (
+                  <span key={mark} style={{ color: w >= mark ? color : "#334155", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>{mark}L</span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
-      <p style={labelStyle}>Did you exercise today?</p>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        {["None", "Walk", "Light", "Moderate", "Intense"].map(a => (
-          <button key={a} onClick={() => setData({ ...data, activity: a })} style={{
-            ...moodBtn, background: data.activity === a ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.05)",
-            border: data.activity === a ? "1px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)"
-          }}>{a}</button>
-        ))}
+      <p style={labelStyle}>🏃 Exercise today</p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {[
+          { id: "none",   label: "None",    emoji: "😴" },
+          { id: "yoga",   label: "Yoga",    emoji: "🧘" },
+          { id: "run",    label: "Run",     emoji: "🏃" },
+          { id: "tennis", label: "Tennis",  emoji: "🎾" },
+          { id: "ballet", label: "Ballet",  emoji: "🩰" },
+          { id: "other",  label: "Other",   emoji: "💪" },
+        ].map(a => {
+          const isSelected = (data.activities || []).includes(a.id);
+          return (
+            <button key={a.id} onClick={() => {
+              if (a.id === "none") {
+                setData({ ...data, activities: ["none"], activityMins: {} });
+                return;
+              }
+              const cur = (data.activities || []).filter(x => x !== "none");
+              const next = cur.includes(a.id) ? cur.filter(x => x !== a.id) : [...cur, a.id];
+              setData({ ...data, activities: next });
+            }} style={{
+              padding: "9px 14px", borderRadius: 12,
+              background: isSelected ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.04)",
+              border: isSelected ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.08)",
+              color: isSelected ? "#c4b5fd" : "#64748b",
+              cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+              display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s",
+            }}>
+              <span>{a.emoji}</span> {a.label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Minutes per selected activity */}
+      {(data.activities || []).filter(a => a !== "none").length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 11, marginBottom: 10 }}>Duration per activity</div>
+          {(data.activities || []).filter(a => a !== "none").map(actId => {
+            const labels = { yoga: "🧘 Yoga", run: "🏃 Run", tennis: "🎾 Tennis", ballet: "🩰 Ballet", other: "💪 Other" };
+            return (
+              <div key={actId} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div style={{ color: "#94a3b8", fontSize: 13, width: 90 }}>{labels[actId]}</div>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <input
+                    type="number"
+                    value={(data.activityMins || {})[actId] || ""}
+                    onChange={e => setData({ ...data, activityMins: { ...(data.activityMins || {}), [actId]: e.target.value } })}
+                    placeholder="0"
+                    style={{ ...textareaStyle, padding: "8px 40px 8px 12px", fontSize: 15, fontFamily: "'DM Mono', monospace" }}
+                  />
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 11, pointerEvents: "none" }}>min</span>
+                </div>
+              </div>
+            );
+          })}
+          {(() => {
+            const total = Object.values(data.activityMins || {}).reduce((s, v) => s + (parseInt(v) || 0), 0);
+            return total > 0 ? (
+              <div style={{ color: "#a78bfa", fontSize: 12, marginTop: 4 }}>
+                Total: {total} min · {Math.round(total / 60 * 10) / 10}h
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
 
       <p style={labelStyle}>Steps today</p>
       <div style={{ marginBottom: 20 }}>
@@ -984,7 +1069,7 @@ function EveningSection({ data, setData }) {
       </div>
 
       <AIAdvice
-        prompt="Based on this person's evening check-in data, give personalised advice for tonight's recovery and wind-down routine. Comment on their day rating, stress level, hydration, activity, and steps count. Suggest sleep preparation tips."
+        prompt="Based on this person's evening check-in data, give personalised advice for tonight's recovery and wind-down routine. Comment on their day rating, stress level, water intake in litres, specific exercises done with duration, and steps. Suggest recovery tips specific to the exercises they did."
         context={data}
         trigger="evening"
       />
@@ -1248,9 +1333,9 @@ function ReportsSection() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {d.evening.dayRating && <span style={pill}>{d.evening.dayRating}</span>}
             {d.evening.stress && <span style={pill}>Stress {d.evening.stress}/10</span>}
-            {d.evening.water && <span style={pill}>💧 {d.evening.water} glasses</span>}
+            {d.evening.water && <span style={pill}>💧 {d.evening.water}L water</span>}
             {d.evening.steps && <span style={pill}>👟 {parseInt(d.evening.steps).toLocaleString()} steps</span>}
-            {d.evening.activity && <span style={pill}>🏃 {d.evening.activity}</span>}
+            {(d.evening.activities || []).filter(a => a !== "none").map(a => { const labels = { yoga:"🧘 Yoga", run:"🏃 Run", tennis:"🎾 Tennis", ballet:"🩰 Ballet", other:"💪 Other" }; const mins = (d.evening.activityMins || {})[a]; return <span key={a} style={pill}>{labels[a]}{mins ? " · " + mins + "min" : ""}</span>; })}
           </div>
         </div>}
 
