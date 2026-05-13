@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const SECTIONS = ["morning", "supplements", "nutrition", "breathing", "evening", "reflection"];
+const SECTIONS = ["morning", "supplements", "nutrition", "breathing", "evening", "reflection", "reports"];
 
 const SECTION_META = {
   morning: { label: "Morning Check-in", emoji: "🌅", time: "Start of Day" },
@@ -9,6 +9,7 @@ const SECTION_META = {
   breathing: { label: "Breathing", emoji: "🫁", time: "3× Daily" },
   evening: { label: "Evening Wind-down", emoji: "🌙", time: "Before Bed" },
   reflection: { label: "Reflection & Gratitude", emoji: "✨", time: "End of Day" },
+  reports: { label: "Progress & Reports", emoji: "📊", time: "Weekly · Monthly · Annual" },
 };
 
 const SUPPLEMENT_SCHEDULE = {
@@ -992,6 +993,376 @@ const textareaStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid
 const statCard = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "16px", textAlign: "center" };
 const ghostBtn = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 16px", color: "#94a3b8", fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" };
 
+
+function ReportsSection() {
+  const [view, setView] = React.useState("weekly"); // weekly | monthly | annual | day
+  const [selectedDate, setSelectedDate] = React.useState(null);
+  const [allData, setAllData] = React.useState({});
+
+  // Load all saved days from localStorage
+  React.useEffect(() => {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("wb_data_")) {
+        try {
+          const date = key.replace("wb_data_", "");
+          data[date] = JSON.parse(localStorage.getItem(key));
+        } catch(e) {}
+      }
+    }
+    setAllData(data);
+  }, []);
+
+  const dates = Object.keys(allData).sort((a, b) => b.localeCompare(a));
+  const today = new Date().toISOString().split("T")[0];
+
+  // Helper: get N days of data ending today
+  const getDays = (n) => {
+    const result = [];
+    for (let i = 0; i < n; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = d.toISOString().split("T")[0];
+      result.push({ date: key, data: allData[key] || null });
+    }
+    return result.reverse();
+  };
+
+  const weekDays   = getDays(7);
+  const monthDays  = getDays(30);
+  const annualDays = getDays(365);
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  };
+  const formatShort = (dateStr) => {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
+  const dayName = (dateStr) => {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("en-GB", { weekday: "short" });
+  };
+
+  // Aggregate stats for a set of days
+  const aggregate = (days) => {
+    const withData = days.filter(d => d.data);
+    const count = withData.length;
+    if (count === 0) return null;
+
+    const avg = (arr) => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
+    const pct = (arr) => arr.length ? Math.round((arr.filter(Boolean).length / arr.length) * 100) : 0;
+
+    const sleepHours   = withData.map(d => parseFloat(d.data.morning?.hours || 0)).filter(Boolean);
+    const energyLevels = withData.map(d => parseInt(d.data.morning?.energy || 0)).filter(Boolean);
+    const stressLevels = withData.map(d => parseInt(d.data.evening?.stress || 0)).filter(Boolean);
+    const stepsArr     = withData.map(d => parseInt(d.data.evening?.steps || 0)).filter(Boolean);
+    const calArr       = withData.map(d => {
+      const meals = d.data.nutrition?.meals || [];
+      return meals.reduce((s, m) => s + (parseInt(m.calories)||0), 0);
+    }).filter(Boolean);
+    const protArr      = withData.map(d => {
+      const meals = d.data.nutrition?.meals || [];
+      return meals.reduce((s, m) => s + (parseInt(m.protein)||0), 0);
+    }).filter(Boolean);
+    const sugarArr     = withData.map(d => {
+      const meals = d.data.nutrition?.meals || [];
+      return meals.reduce((s, m) => s + (parseInt(m.sugar)||0), 0);
+    }).filter(Boolean);
+    const waterChecked = withData.map(d => d.data.morning?.water);
+    const moodMap = {"😴 Tired":1,"😐 Okay":2,"🙂 Good":3,"😊 Great":4,"⚡ Energised":5};
+    const moodArr = withData.map(d => moodMap[d.data.morning?.mood] || 0).filter(Boolean);
+
+    // Supplement adherence
+    const schedule = (() => { try { const s = localStorage.getItem("wb_supplement_schedule"); return s ? JSON.parse(s) : null; } catch(e){return null;} })();
+    const suppItems = schedule ? Object.values(schedule).flatMap(g => g.items.map(i => i.id)) : [];
+    const suppAdherence = suppItems.length > 0 ? withData.map(d => {
+      const taken = d.data.supplements?.taken || [];
+      return taken.length / suppItems.length;
+    }) : [];
+
+    return {
+      count, total: days.length,
+      avgSleep: avg(sleepHours.map(h => Math.round(h * 10) / 10)), 
+      avgEnergy: avg(energyLevels),
+      avgStress: avg(stressLevels),
+      avgSteps: avg(stepsArr),
+      avgCal: avg(calArr),
+      avgProt: avg(protArr),
+      avgSugar: avg(sugarArr),
+      waterPct: pct(waterChecked),
+      avgMood: avg(moodArr),
+      suppPct: suppAdherence.length ? Math.round(suppAdherence.reduce((a,b)=>a+b,0)/suppAdherence.length*100) : null,
+    };
+  };
+
+  const weekStats  = aggregate(weekDays);
+  const monthStats = aggregate(monthDays);
+  const annualStats = aggregate(annualDays);
+
+  // Color helpers
+  const scoreColor = (val, good, bad, reverse=false) => {
+    if (!val) return "#475569";
+    if (reverse) { if (val <= good) return "#34d399"; if (val <= bad) return "#f59e0b"; return "#f87171"; }
+    if (val >= good) return "#34d399"; if (val >= bad) return "#f59e0b"; return "#f87171";
+  };
+
+  const StatRow = ({ label, value, unit, color }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ color: "#94a3b8", fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
+      <div style={{ color: color || "#e2e8f0", fontSize: 15, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>
+        {value !== null && value !== undefined ? `${value}${unit || ""}` : <span style={{color:"#334155"}}>—</span>}
+      </div>
+    </div>
+  );
+
+  const StatsPanel = ({ stats, label }) => {
+    if (!stats) return <div style={{ color: "#475569", fontSize: 13, padding: 16 }}>No data yet for this period.</div>;
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ color: "#64748b", fontSize: 12, letterSpacing: 1 }}>{stats.count} of {stats.total} days tracked</div>
+          <div style={{ height: 4, width: 120, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: (stats.count/stats.total*100)+"%", background: "#a78bfa", borderRadius: 99 }} />
+          </div>
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>😴 Sleep & Energy</div>
+          <StatRow label="Avg sleep" value={stats.avgSleep} unit="h" color={scoreColor(stats.avgSleep, 7.5, 6.5)} />
+          <StatRow label="Avg energy" value={stats.avgEnergy || null} unit="/10" color={scoreColor(stats.avgEnergy, 7, 5)} />
+          <StatRow label="Avg stress" value={stats.avgStress || null} unit="/10" color={scoreColor(stats.avgStress, 4, 6, true)} />
+          <StatRow label="Avg mood" value={stats.avgMood || null} unit="/5" color={scoreColor(stats.avgMood, 4, 3)} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>🥗 Nutrition</div>
+          <StatRow label="Avg calories" value={stats.avgCal || null} unit=" kcal" color={scoreColor(stats.avgCal, 1700, 1400)} />
+          <StatRow label="Avg protein" value={stats.avgProt || null} unit="g" color={scoreColor(stats.avgProt, 120, 90)} />
+          <StatRow label="Avg sugar" value={stats.avgSugar || null} unit="g" color={scoreColor(stats.avgSugar, 15, 25, true)} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>💊 Supplements & Habits</div>
+          <StatRow label="Supplement adherence" value={stats.suppPct} unit="%" color={scoreColor(stats.suppPct, 80, 60)} />
+          <StatRow label="Morning water" value={stats.waterPct} unit="%" color={scoreColor(stats.waterPct, 80, 50)} />
+          <StatRow label="Avg steps" value={stats.avgSteps || null} unit="" color={scoreColor(stats.avgSteps, 8000, 5000)} />
+        </div>
+      </div>
+    );
+  };
+
+  // Day detail view
+  const DayDetail = ({ dateStr }) => {
+    const d = allData[dateStr];
+    if (!d) return <div style={{ color: "#475569", padding: 16, fontSize: 13 }}>No data recorded for this day.</div>;
+    const meals = d.nutrition?.meals || [];
+    const totalCal = meals.reduce((s,m)=>s+(parseInt(m.calories)||0),0);
+    const totalProt = meals.reduce((s,m)=>s+(parseInt(m.protein)||0),0);
+    const totalSugar = meals.reduce((s,m)=>s+(parseInt(m.sugar)||0),0);
+    const schedule = (() => { try { const s = localStorage.getItem("wb_supplement_schedule"); return s ? JSON.parse(s) : null; } catch(e){return null;} })();
+    const allSupps = schedule ? Object.values(schedule).flatMap(g => g.items) : [];
+    const taken = d.supplements?.taken || [];
+
+    return (
+      <div>
+        <button onClick={() => { setSelectedDate(null); setView("weekly"); }} style={{ ...ghostBtn, fontSize: 12, marginBottom: 20 }}>← Back</button>
+        <h3 style={{ margin: "0 0 20px", color: "#f1f5f9", fontSize: 18, fontWeight: 600 }}>{formatDate(dateStr)}</h3>
+
+        {d.morning && <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🌅 Morning</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {d.morning.mood && <span style={pill}>{d.morning.mood}</span>}
+            {d.morning.hours && <span style={pill}>😴 {d.morning.hours}h sleep</span>}
+            {d.morning.sleep && <span style={pill}>Sleep: {d.morning.sleep}</span>}
+            {d.morning.energy && <span style={pill}>⚡ Energy {d.morning.energy}/10</span>}
+            {d.morning.water && <span style={{ ...pill, background: "rgba(52,211,153,0.15)", color: "#34d399" }}>🍋 Morning water ✓</span>}
+          </div>
+          {d.morning.tasks && <div style={{ color: "#64748b", fontSize: 13, marginTop: 10, fontStyle: "italic" }}>"{d.morning.tasks}"</div>}
+        </div>}
+
+        {allSupps.length > 0 && <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>💊 Supplements ({taken.length}/{allSupps.length})</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {allSupps.map(s => (
+              <span key={s.id} style={{ ...pill, background: taken.includes(s.id) ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.04)", color: taken.includes(s.id) ? "#34d399" : "#334155", textDecoration: taken.includes(s.id) ? "none" : "line-through" }}>
+                {taken.includes(s.id) ? "✓" : "○"} {s.name}
+              </span>
+            ))}
+          </div>
+        </div>}
+
+        {meals.length > 0 && <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🥗 Nutrition</div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+            <div style={miniStat}><div style={{ color: "#f59e0b", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalCal}</div><div style={{ color: "#475569", fontSize: 10 }}>kcal</div></div>
+            <div style={miniStat}><div style={{ color: "#34d399", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalProt}g</div><div style={{ color: "#475569", fontSize: 10 }}>protein</div></div>
+            <div style={miniStat}><div style={{ color: totalSugar > 25 ? "#f87171" : "#a78bfa", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalSugar}g</div><div style={{ color: "#475569", fontSize: 10 }}>sugar</div></div>
+          </div>
+          {meals.filter(m=>m.name).map((m,i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: 13 }}>
+              <span style={{ color: "#94a3b8" }}>{m.name}</span>
+              <span style={{ color: "#475569", fontFamily: "'DM Mono', monospace", fontSize: 12 }}>{m.calories||0}kcal · {m.protein||0}g · {m.sugar||0}g</span>
+            </div>
+          ))}
+        </div>}
+
+        {d.evening && <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🌙 Evening</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {d.evening.dayRating && <span style={pill}>{d.evening.dayRating}</span>}
+            {d.evening.stress && <span style={pill}>Stress {d.evening.stress}/10</span>}
+            {d.evening.water && <span style={pill}>💧 {d.evening.water} glasses</span>}
+            {d.evening.steps && <span style={pill}>👟 {parseInt(d.evening.steps).toLocaleString()} steps</span>}
+            {d.evening.activity && <span style={pill}>🏃 {d.evening.activity}</span>}
+          </div>
+        </div>}
+
+        {d.reflection && (d.reflection.gratitude || d.reflection.wins) && <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>✨ Reflection</div>
+          {d.reflection.gratitude?.filter(Boolean).map((g, i) => (
+            <div key={i} style={{ color: "#94a3b8", fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>✦ {g}</div>
+          ))}
+          {d.reflection.wins && <div style={{ color: "#64748b", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>"{d.reflection.wins}"</div>}
+        </div>}
+      </div>
+    );
+  };
+
+  const pill = { padding: "4px 10px", borderRadius: 99, fontSize: 12, background: "rgba(255,255,255,0.06)", color: "#94a3b8", fontFamily: "'DM Sans', sans-serif" };
+  const miniStat = { flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px", textAlign: "center" };
+
+  // Calendar strip for day picker
+  const CalendarStrip = ({ days }) => (
+    <div style={{ overflowX: "auto", marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 6, paddingBottom: 4, minWidth: "max-content" }}>
+        {days.map(({ date, data: d }) => {
+          const hasData = !!d;
+          const isToday = date === today;
+          const isSelected = date === selectedDate;
+          return (
+            <button key={date} onClick={() => { setSelectedDate(date); setView("day"); }} style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+              padding: "8px 6px", borderRadius: 10, minWidth: 42,
+              background: isSelected ? "rgba(167,139,250,0.25)" : isToday ? "rgba(255,255,255,0.08)" : "transparent",
+              border: isSelected ? "1px solid #a78bfa" : isToday ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent",
+              cursor: "pointer",
+            }}>
+              <div style={{ color: "#475569", fontSize: 10 }}>{dayName(date)}</div>
+              <div style={{ color: isSelected ? "#c4b5fd" : isToday ? "#f1f5f9" : "#64748b", fontSize: 13, fontWeight: isToday ? 700 : 400, fontFamily: "'DM Mono', monospace" }}>
+                {new Date(date + "T12:00:00").getDate()}
+              </div>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: hasData ? "#a78bfa" : "rgba(255,255,255,0.08)" }} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  if (selectedDate && view === "day") {
+    return (
+      <div>
+        <CalendarStrip days={view === "day" ? getDays(30) : weekDays} />
+        <DayDetail dateStr={selectedDate} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Period tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+        {[["weekly","7 Days"],["monthly","30 Days"],["annual","12 Months"]].map(([v, label]) => (
+          <button key={v} onClick={() => setView(v)} style={{
+            padding: "8px 16px", borderRadius: 99, fontSize: 13,
+            background: view === v ? "rgba(167,139,250,0.2)" : "transparent",
+            border: view === v ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.07)",
+            color: view === v ? "#c4b5fd" : "#64748b", cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {/* Calendar strip */}
+      {view === "weekly"  && <CalendarStrip days={weekDays} />}
+      {view === "monthly" && <CalendarStrip days={monthDays} />}
+      {view === "annual"  && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#475569", fontSize: 11, marginBottom: 10 }}>Tap a month to explore days</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+            {Array.from({length: 12}, (_,i) => {
+              const d = new Date(); d.setMonth(d.getMonth() - 11 + i);
+              const monthKey = d.toISOString().slice(0,7);
+              const monthDaysData = annualDays.filter(day => day.date.startsWith(monthKey));
+              const tracked = monthDaysData.filter(d => d.data).length;
+              return (
+                <div key={i} style={{ ...statCard, padding: 10, textAlign: "center", cursor: "pointer" }}
+                  onClick={() => setView("monthly")}>
+                  <div style={{ color: "#64748b", fontSize: 11 }}>{d.toLocaleDateString("en-GB",{month:"short"})}</div>
+                  <div style={{ color: tracked > 0 ? "#a78bfa" : "#334155", fontSize: 18, fontFamily: "'DM Mono', monospace", margin: "4px 0" }}>{tracked}</div>
+                  <div style={{ color: "#334155", fontSize: 10 }}>days</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Stats panel */}
+      {view === "weekly"  && <StatsPanel stats={weekStats}   label="This Week" />}
+      {view === "monthly" && <StatsPanel stats={monthStats}  label="This Month" />}
+      {view === "annual"  && <StatsPanel stats={annualStats} label="This Year" />}
+
+      {/* Recent days list */}
+      {view !== "annual" && dates.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Recent Days</div>
+          {dates.slice(0, view === "weekly" ? 7 : 30).map(date => {
+            const d = allData[date];
+            const meals = d.nutrition?.meals || [];
+            const cal = meals.reduce((s,m)=>s+(parseInt(m.calories)||0),0);
+            const steps = parseInt(d.evening?.steps || 0);
+            return (
+              <button key={date} onClick={() => { setSelectedDate(date); setView("day"); }} style={{
+                width: "100%", padding: "12px 14px", borderRadius: 12, marginBottom: 8,
+                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center",
+              }}>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+                    {date === today ? "Today" : formatDate(date)}
+                  </div>
+                  <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
+                    {d.morning?.mood || ""} {d.morning?.hours ? d.morning.hours + "h sleep" : ""}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {cal > 0 && <div style={{ textAlign: "right" }}>
+                    <div style={{ color: "#f59e0b", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{cal}</div>
+                    <div style={{ color: "#334155", fontSize: 10 }}>kcal</div>
+                  </div>}
+                  {steps > 0 && <div style={{ textAlign: "right" }}>
+                    <div style={{ color: "#60a5fa", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{steps.toLocaleString()}</div>
+                    <div style={{ color: "#334155", fontSize: 10 }}>steps</div>
+                  </div>}
+                  <div style={{ color: "#334155", fontSize: 16 }}>›</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {dates.length === 0 && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#334155" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
+          <div style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>No history yet.</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>Start tracking today and your data will appear here.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WellbeingCompanion() {
   const [activeSection, setActiveSection] = useState("morning");
   const [sectionData, setSectionData] = useState({});
@@ -1105,6 +1476,7 @@ export default function WellbeingCompanion() {
           {activeSection === "breathing" && <BreathingSection data={sectionData.breathing || {}} setData={setData("breathing")} />}
           {activeSection === "evening" && <EveningSection data={sectionData.evening || {}} setData={setData("evening")} />}
           {activeSection === "reflection" && <ReflectionSection data={sectionData.reflection || {}} setData={setData("reflection")} />}
+          {activeSection === "reports" && <ReportsSection />}
         </div>
 
         {/* Nav arrows */}
