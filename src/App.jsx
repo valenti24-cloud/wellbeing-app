@@ -701,7 +701,11 @@ function BreathingSection({ data, setData }) {
   const [phase, setPhase] = useState(0);
   const [count, setCount] = useState(0);
   const [cycles, setCycles] = useState(0);
+  const [sessionMins, setSessionMins] = useState(5);
+  const [sessionLeft, setSessionLeft] = useState(5 * 60);
+  const [sessionDone, setSessionDone] = useState(false);
   const timerRef = useRef(null);
+  const sessionRef = useRef(null);
   const animFrameRef = useRef(null);
   const phaseStartRef = useRef(null);
   const [scale, setScale] = useState(0.08);
@@ -711,16 +715,42 @@ function BreathingSection({ data, setData }) {
 
   const start = (id) => {
     clearInterval(timerRef.current);
+    clearInterval(sessionRef.current);
     cancelAnimationFrame(animFrameRef.current);
+    const secs = sessionMins * 60;
     setActive(id); setPhase(0); setCount(0); setCycles(0); setScale(0.08);
+    setSessionLeft(secs); setSessionDone(false);
     phaseStartRef.current = performance.now();
+    // Session countdown
+    sessionRef.current = setInterval(() => {
+      setSessionLeft(t => {
+        if (t <= 1) {
+          clearInterval(sessionRef.current);
+          setSessionDone(true);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
   };
 
   const stop = () => {
     clearInterval(timerRef.current);
+    clearInterval(sessionRef.current);
     cancelAnimationFrame(animFrameRef.current);
     setActive(null); setPhase(0); setCount(0); setScale(0.08);
+    setSessionLeft(sessionMins * 60); setSessionDone(false);
   };
+
+  // Auto-stop when session timer hits zero
+  useEffect(() => {
+    if (sessionDone && active) {
+      clearInterval(timerRef.current);
+      cancelAnimationFrame(animFrameRef.current);
+      // Brief delay so last breath phase can complete
+      setTimeout(() => { setActive(null); setPhase(0); setCount(0); setScale(0.08); setSessionDone(false); }, 800);
+    }
+  }, [sessionDone]);
 
   // rAF loop for smooth scale animation
   useEffect(() => {
@@ -732,14 +762,12 @@ function BreathingSection({ data, setData }) {
       const phaseName = ex.phases[phase];
       let s;
       if (phaseName === "Inhale") {
-        // ease in-out: 0.08 -> 1.0
         const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
         s = 0.08 + ease * 0.92;
       } else if (phaseName === "Exhale") {
         const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
         s = 1.0 - ease * 0.92;
       } else {
-        // Hold: gentle pulse
         s = 1.0 + Math.sin(t * Math.PI * 2) * 0.04;
       }
       setScale(s);
@@ -749,7 +777,7 @@ function BreathingSection({ data, setData }) {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [active, phase]);
 
-  // Second ticker for phase transitions
+  // Phase ticker
   useEffect(() => {
     if (!active || !ex) return;
     timerRef.current = setInterval(() => {
@@ -772,8 +800,10 @@ function BreathingSection({ data, setData }) {
   const phaseName = ex ? ex.phases[phase] : "";
   const dur = ex ? durations[phase] : 4;
   const timeLeft = ex ? dur - count : 0;
+  const sessionPct = active ? ((sessionMins * 60 - sessionLeft) / (sessionMins * 60)) * 100 : 0;
+  const sessionMinsLeft = Math.floor(sessionLeft / 60);
+  const sessionSecsLeft = String(sessionLeft % 60).padStart(2, "0");
 
-  // Ring configs: [baseSize in px, opacity]
   const rings = [
     { size: 100, opacity: 0.75 },
     { size: 160, opacity: 0.40 },
@@ -792,7 +822,17 @@ function BreathingSection({ data, setData }) {
           overflow: "hidden",
         }}>
 
-          {/* Circles — all same centre, scaled together */}
+          {/* Session timer arc at top */}
+          <div style={{ position: "absolute", top: 48, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, letterSpacing: 1 }}>
+              {sessionMinsLeft}:{sessionSecsLeft}
+            </div>
+            <div style={{ width: 160, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: sessionPct + "%", background: "rgba(255,255,255,0.35)", borderRadius: 99, transition: "width 1s linear" }} />
+            </div>
+          </div>
+
+          {/* Circles */}
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {rings.map((ring, i) => {
               const s = ring.size * scale;
@@ -808,32 +848,12 @@ function BreathingSection({ data, setData }) {
                 }} />
               );
             })}
-
-            {/* Invisible anchor so relative div has size */}
             <div style={{ width: 290, height: 290, borderRadius: "50%", opacity: 0 }} />
-
-            {/* Centre label */}
-            <div style={{
-              position: "absolute", inset: 0, zIndex: 20,
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 0,
-            }}>
-              <div style={{
-                color: "rgba(255,255,255,0.55)", fontSize: 13, fontWeight: 500,
-                fontFamily: "'DM Sans', sans-serif", letterSpacing: 5,
-                textTransform: "uppercase", marginBottom: 6,
-                transition: "opacity 0.4s",
-              }}>
+            <div style={{ position: "absolute", inset: 0, zIndex: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0 }}>
+              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", letterSpacing: 5, textTransform: "uppercase", marginBottom: 6, transition: "opacity 0.4s" }}>
                 {phaseName}
               </div>
-              <div style={{
-                color: "#ffffff",
-                fontSize: 96, fontWeight: 200,
-                fontFamily: "'DM Mono', monospace",
-                lineHeight: 1,
-                textShadow: "0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(180,210,230,0.3)",
-                letterSpacing: -4,
-              }}>
+              <div style={{ color: "#ffffff", fontSize: 96, fontWeight: 200, fontFamily: "'DM Mono', monospace", lineHeight: 1, textShadow: "0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(180,210,230,0.3)", letterSpacing: -4 }}>
                 {timeLeft}
               </div>
             </div>
@@ -851,8 +871,7 @@ function BreathingSection({ data, setData }) {
                   background: i === phase ? "rgba(255,255,255,0.12)" : "transparent",
                   color: i === phase ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)",
                   border: `1px solid ${i === phase ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.07)"}`,
-                  fontFamily: "'DM Sans', sans-serif",
-                  transition: "all 0.4s",
+                  fontFamily: "'DM Sans', sans-serif", transition: "all 0.4s",
                 }}>
                   {p} {Array.isArray(ex.duration) ? ex.duration[i] : ex.duration}s
                 </div>
@@ -862,8 +881,7 @@ function BreathingSection({ data, setData }) {
 
           <button onClick={stop} style={{
             position: "absolute", top: 52, right: 24,
-            background: "rgba(255,255,255,0.07)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 99, padding: "8px 18px",
             color: "rgba(255,255,255,0.5)", fontSize: 13,
             fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
@@ -873,13 +891,28 @@ function BreathingSection({ data, setData }) {
         </div>
       ) : (
         <div>
+          {/* Session duration picker */}
+          <p style={labelStyle}>Session duration</p>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+            {[3, 5, 10, 15, 20].map(m => (
+              <button key={m} onClick={() => setSessionMins(m)} style={{
+                padding: "8px 16px", borderRadius: 10,
+                background: sessionMins === m ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.04)",
+                border: sessionMins === m ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                color: sessionMins === m ? "#c4b5fd" : "#64748b",
+                fontSize: 13, fontFamily: "'DM Mono', monospace", cursor: "pointer", transition: "all 0.2s",
+              }}>
+                {m} min
+              </button>
+            ))}
+          </div>
+
           <p style={labelStyle}>Choose an exercise</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
             {BREATHING_EXERCISES.map(e => (
               <button key={e.id} onClick={() => start(e.id)} style={{
                 padding: "16px 18px", borderRadius: 16, textAlign: "left",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
                 color: "#e2e8f0", cursor: "pointer", transition: "all 0.2s",
               }}>
                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 15, marginBottom: 3 }}>{e.name}</div>
