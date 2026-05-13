@@ -61,6 +61,28 @@ const SUPPLEMENT_SCHEDULE = {
   }
 };
 
+
+// Supplement cycling recommendations
+// courseDays: recommended continuous use days (-1 = ongoing/no break needed)
+// breakDays: recommended break duration
+// notes: brief clinical rationale
+const SUPPLEMENT_CYCLES = {
+  inositol_m:  { courseDays: 90,  breakDays: 30, notes: "3-month cycles recommended for hormonal regulation" },
+  inositol_e:  { courseDays: 90,  breakDays: 30, notes: "Same cycle as morning dose" },
+  nac:         { courseDays: 60,  breakDays: 14, notes: "Cycle to prevent glutathione dependency" },
+  folic:       { courseDays: -1,  breakDays: 0,  notes: "Ongoing — essential B vitamin, no break needed" },
+  juno_b:      { courseDays: -1,  breakDays: 0,  notes: "Multivitamin — ongoing use recommended" },
+  juno_l:      { courseDays: -1,  breakDays: 0,  notes: "Multivitamin — ongoing use recommended" },
+  ubiquinol_b: { courseDays: -1,  breakDays: 0,  notes: "CoQ10 — safe for long-term use, no break needed" },
+  ubiquinol_l: { courseDays: -1,  breakDays: 0,  notes: "CoQ10 — safe for long-term use, no break needed" },
+  vitd_b:      { courseDays: -1,  breakDays: 0,  notes: "Check levels every 3 months; adjust dose with doctor" },
+  vitd_l:      { courseDays: -1,  breakDays: 0,  notes: "Check levels every 3 months; adjust dose with doctor" },
+  omega:       { courseDays: -1,  breakDays: 0,  notes: "Omega-3 — safe ongoing, no break needed" },
+  blackcumin:  { courseDays: 90,  breakDays: 30, notes: "Cycle to maintain therapeutic effectiveness" },
+  iron:        { courseDays: 90,  breakDays: 90, notes: "Check ferritin levels after 3 months; avoid over-supplementing" },
+  magnesium:   { courseDays: -1,  breakDays: 0,  notes: "Magnesium glycinate — safe ongoing, essential mineral" },
+};
+
 const BREATHING_EXERCISES = [
   { id: "box", name: "Box Breathing", desc: "4-4-4-4 pattern. Reduces stress and improves focus.", phases: ["Inhale", "Hold", "Exhale", "Hold"], duration: 4, best: "Morning & During Day" },
   { id: "478", name: "4-7-8 Breathing", desc: "Activates parasympathetic nervous system for deep calm.", phases: ["Inhale", "Hold", "Exhale"], duration: [4, 7, 8], best: "Before Sleep" },
@@ -1258,6 +1280,157 @@ function ReportsSection() {
     </div>
   );
 
+
+  // Supplement history tracker
+  const SupplementTracker = () => {
+    const schedule = (() => {
+      try { const s = localStorage.getItem("wb_supplement_schedule"); return s ? JSON.parse(s) : null; }
+      catch(e) { return null; }
+    })() || SUPPLEMENT_SCHEDULE;
+
+    // Get all supplement metadata — meta stored separately in localStorage
+    const getMeta = () => {
+      try { return JSON.parse(localStorage.getItem("wb_supp_meta") || "{}"); }
+      catch(e) { return {}; }
+    };
+    const saveMeta = (meta) => {
+      try { localStorage.setItem("wb_supp_meta", JSON.stringify(meta)); }
+      catch(e) {}
+    };
+
+    const [meta, setMeta] = React.useState(getMeta);
+    const [editingId, setEditingId] = React.useState(null);
+    const [dateInput, setDateInput] = React.useState("");
+
+    // Count days taken from history
+    const countDaysTaken = (suppId) => {
+      let count = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("wb_data_")) {
+          try {
+            const d = JSON.parse(localStorage.getItem(key));
+            if ((d.supplements?.taken || []).includes(suppId)) count++;
+          } catch(e) {}
+        }
+      }
+      return count;
+    };
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const allItems = Object.values(schedule).flatMap(g =>
+      g.items.map(item => ({ ...item, groupColor: g.color, groupLabel: g.label }))
+    );
+
+    // Deduplicate by base name (inositol_m and inositol_e are same supplement)
+    const seen = new Set();
+    const uniqueItems = allItems.filter(item => {
+      const baseName = item.name.toLowerCase();
+      if (seen.has(baseName)) return false;
+      seen.add(baseName);
+      return true;
+    });
+
+    const setStartDate = (id, date) => {
+      const updated = { ...meta, [id]: { ...meta[id], startDate: date } };
+      setMeta(updated);
+      saveMeta(updated);
+      setEditingId(null);
+    };
+
+    const daysSince = (dateStr) => {
+      if (!dateStr) return null;
+      const start = new Date(dateStr + "T12:00:00");
+      const now = new Date();
+      return Math.floor((now - start) / (1000 * 60 * 60 * 24));
+    };
+
+    const getStatus = (item, daysTaken, daysSinceStart) => {
+      const cycle = SUPPLEMENT_CYCLES[item.id];
+      if (!cycle) return null;
+      if (cycle.courseDays === -1) return { type: "ongoing", label: "Ongoing", color: "#34d399", detail: cycle.notes };
+      const progress = Math.min((daysTaken / cycle.courseDays) * 100, 100);
+      const daysLeft = Math.max(0, cycle.courseDays - daysTaken);
+      if (daysLeft === 0) {
+        return { type: "break", label: `Take a ${cycle.breakDays}-day break`, color: "#f87171", detail: `Completed ${cycle.courseDays}-day course. Rest for ${cycle.breakDays} days.`, progress: 100 };
+      }
+      return { type: "active", label: `${daysLeft} days left in course`, color: "#a78bfa", detail: cycle.notes, progress };
+    };
+
+    return (
+      <div>
+        <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>💊 Supplement Tracker</div>
+        {uniqueItems.map(item => {
+          const daysTaken = countDaysTaken(item.id);
+          const startDate = meta[item.id]?.startDate;
+          const daysElapsed = daysSince(startDate);
+          const cycle = SUPPLEMENT_CYCLES[item.id];
+          const status = getStatus(item, daysTaken, daysElapsed);
+
+          return (
+            <div key={item.id} style={{ marginBottom: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+              {/* Name row */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div style={{ flex: 1, paddingRight: 10 }}>
+                  <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
+                  <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{item.dose}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ color: "#a78bfa", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{daysTaken}</div>
+                  <div style={{ color: "#334155", fontSize: 10 }}>days taken</div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {status && cycle?.courseDays > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
+                    <div style={{ height: "100%", width: (status.progress || 0) + "%", background: status.color, borderRadius: 99, transition: "width 0.4s ease" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#334155", fontSize: 10 }}>0</span>
+                    <span style={{ color: "#334155", fontSize: 10 }}>{cycle.courseDays} days</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Status badge */}
+              {status && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 11, background: status.color + "22", color: status.color, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                    {status.label}
+                  </span>
+                </div>
+              )}
+
+              {/* Clinical note */}
+              {status?.detail && (
+                <div style={{ color: "#475569", fontSize: 11, marginBottom: 8, lineHeight: 1.5 }}>{status.detail}</div>
+              )}
+
+              {/* Start date */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                {editingId === item.id ? (
+                  <>
+                    <input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)}
+                      style={{ ...{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"5px 10px",color:"#e2e8f0",fontSize:12,outline:"none"} }} />
+                    <button onClick={() => setStartDate(item.id, dateInput)} style={{ padding:"4px 12px", borderRadius:8, background:"rgba(167,139,250,0.2)", border:"1px solid rgba(167,139,250,0.3)", color:"#c4b5fd", fontSize:11, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={{ padding:"4px 10px", borderRadius:8, background:"transparent", border:"1px solid rgba(255,255,255,0.08)", color:"#475569", fontSize:11, cursor:"pointer" }}>Cancel</button>
+                  </>
+                ) : (
+                  <button onClick={() => { setEditingId(item.id); setDateInput(startDate || today); }} style={{ padding:"4px 12px", borderRadius:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color:"#475569", fontSize:11, cursor:"pointer", fontFamily:"'DM Sans', sans-serif" }}>
+                    {startDate ? `📅 Started ${formatDate(startDate)} · ${daysElapsed}d elapsed` : "📅 Set start date"}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (selectedDate && view === "day") {
     return (
       <div>
@@ -1271,7 +1444,7 @@ function ReportsSection() {
     <div>
       {/* Period tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        {[["weekly","7 Days"],["monthly","30 Days"],["annual","12 Months"]].map(([v, label]) => (
+        {[["weekly","7 Days"],["monthly","30 Days"],["annual","12 Months"],["supplements","Supplements"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{
             padding: "8px 16px", borderRadius: 99, fontSize: 13,
             background: view === v ? "rgba(167,139,250,0.2)" : "transparent",
@@ -1283,9 +1456,9 @@ function ReportsSection() {
       </div>
 
       {/* Calendar strip */}
-      {view === "weekly"  && <CalendarStrip days={weekDays} />}
-      {view === "monthly" && <CalendarStrip days={monthDays} />}
-      {view === "annual"  && (
+      {view !== "supplements" && view === "weekly"  && <CalendarStrip days={weekDays} />}
+      {view !== "supplements" && view === "monthly" && <CalendarStrip days={monthDays} />}
+      {view !== "supplements" && view === "annual"  && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ color: "#475569", fontSize: 11, marginBottom: 10 }}>Tap a month to explore days</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
@@ -1308,12 +1481,12 @@ function ReportsSection() {
       )}
 
       {/* Stats panel */}
-      {view === "weekly"  && <StatsPanel stats={weekStats}   label="This Week" />}
-      {view === "monthly" && <StatsPanel stats={monthStats}  label="This Month" />}
-      {view === "annual"  && <StatsPanel stats={annualStats} label="This Year" />}
+      {view !== "supplements" && view === "weekly"  && <StatsPanel stats={weekStats}   label="This Week" />}
+      {view !== "supplements" && view === "monthly" && <StatsPanel stats={monthStats}  label="This Month" />}
+      {view !== "supplements" && view === "annual"  && <StatsPanel stats={annualStats} label="This Year" />}
 
       {/* Recent days list */}
-      {view !== "annual" && dates.length > 0 && (
+      {view !== "supplements" && view !== "annual" && dates.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Recent Days</div>
           {dates.slice(0, view === "weekly" ? 7 : 30).map(date => {
@@ -1352,7 +1525,9 @@ function ReportsSection() {
         </div>
       )}
 
-      {dates.length === 0 && (
+      {view === "supplements" && <SupplementTracker />}
+
+      {view !== "supplements" && dates.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#334155" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
           <div style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>No history yet.</div>
