@@ -398,7 +398,21 @@ function SupplementsSection({ data, setData }) {
 
   const taken = data.taken || [];
 
+  // Check if a supplement is currently on break based on start date meta
+  const isOnBreak = (itemId) => {
+    try {
+      const meta = JSON.parse(localStorage.getItem("wb_supp_meta") || "{}");
+      const startDate = meta[itemId]?.startDate;
+      if (!startDate) return false;
+      const cycle = SUPPLEMENT_CYCLES[itemId];
+      if (!cycle || cycle.courseDays === -1) return false;
+      const daysTaken = Math.max(0, Math.floor((new Date() - new Date(startDate + "T12:00:00")) / (1000 * 60 * 60 * 24)));
+      return daysTaken >= cycle.courseDays;
+    } catch(e) { return false; }
+  };
+
   const toggle = (id) => {
+    if (isOnBreak(id)) return; // locked during break
     setData({ ...data, taken: taken.includes(id) ? taken.filter(x => x !== id) : [...taken, id] });
   };
 
@@ -532,30 +546,36 @@ function SupplementsSection({ data, setData }) {
               {group.items.map(item => {
                 const isTaken = taken.includes(item.id);
                 return (
-                  <button key={item.id} onClick={() => toggle(item.id)} style={{
-                    padding: "12px 14px", borderRadius: 12, textAlign: "left",
-                    background: isTaken ? `${group.color}18` : "rgba(255,255,255,0.03)",
-                    border: isTaken ? `1px solid ${group.color}55` : "1px solid rgba(255,255,255,0.07)",
-                    cursor: "pointer", transition: "all 0.2s", display: "flex", alignItems: "flex-start", gap: 12
-                  }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
-                      background: isTaken ? group.color : "transparent",
-                      border: isTaken ? `none` : `1.5px solid #334155`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 11, color: "#0a0a12", fontWeight: 700, transition: "all 0.2s"
-                    }}>
-                      {isTaken ? "✓" : ""}
-                    </div>
-                    <div>
-                      <div style={{ color: isTaken ? "#e2e8f0" : "#94a3b8", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>
-                        {item.name}
-                      </div>
-                      <div style={{ color: isTaken ? group.color : "#475569", fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace" }}>
-                        {item.dose}
-                      </div>
-                    </div>
-                  </button>
+                  {(() => {
+                    const onBreak = isOnBreak(item.id);
+                    return (
+                      <button key={item.id} onClick={() => toggle(item.id)} style={{
+                        padding: "12px 14px", borderRadius: 12, textAlign: "left",
+                        background: onBreak ? "rgba(248,113,113,0.05)" : isTaken ? `${group.color}18` : "rgba(255,255,255,0.03)",
+                        border: onBreak ? "1px solid rgba(248,113,113,0.2)" : isTaken ? `1px solid ${group.color}55` : "1px solid rgba(255,255,255,0.07)",
+                        cursor: onBreak ? "not-allowed" : "pointer", transition: "all 0.2s", display: "flex", alignItems: "flex-start", gap: 12,
+                        opacity: onBreak ? 0.6 : 1,
+                      }}>
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
+                          background: onBreak ? "rgba(248,113,113,0.2)" : isTaken ? group.color : "transparent",
+                          border: onBreak ? "1.5px solid #f87171" : isTaken ? "none" : "1.5px solid #334155",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 11, color: onBreak ? "#f87171" : "#0a0a12", fontWeight: 700, transition: "all 0.2s"
+                        }}>
+                          {onBreak ? "✕" : isTaken ? "✓" : ""}
+                        </div>
+                        <div>
+                          <div style={{ color: onBreak ? "#f87171" : isTaken ? "#e2e8f0" : "#94a3b8", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>
+                            {item.name}
+                          </div>
+                          <div style={{ color: onBreak ? "#f87171" : isTaken ? group.color : "#475569", fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace" }}>
+                            {onBreak ? "⛔ On break — see Reports" : item.dose}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })()}
                 );
               })}
             </div>
@@ -1346,94 +1366,123 @@ function ReportsSection() {
       return Math.floor((now - start) / (1000 * 60 * 60 * 24));
     };
 
-    const getStatus = (item, daysActive, daysTakenFromLog) => {
+    const getStatus = (item, daysTaken, startDate) => {
       const cycle = SUPPLEMENT_CYCLES[item.id];
       if (!cycle) return null;
-      if (cycle.courseDays === -1) return { type: "ongoing", label: "Ongoing", color: "#34d399", detail: cycle.notes };
-      const progress = Math.min((daysActive / cycle.courseDays) * 100, 100);
-      const daysLeft = Math.max(0, cycle.courseDays - daysActive);
-      if (daysLeft === 0) {
-        const breakEndDate = new Date();
-        breakEndDate.setDate(breakEndDate.getDate() + cycle.breakDays);
-        const breakEnd = breakEndDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-        return { type: "break", label: `⛔ Take a ${cycle.breakDays}-day break`, color: "#f87171", detail: `Course complete! Rest until ${breakEnd}, then start again.`, progress: 100 };
+      if (cycle.courseDays === -1) return { type: "ongoing", color: "#34d399" };
+      if (!startDate) return { type: "nodate", color: "#475569" };
+
+      if (daysTaken >= cycle.courseDays) {
+        // On break — count break days elapsed since course ended
+        const courseEndDate = new Date(startDate + "T12:00:00");
+        courseEndDate.setDate(courseEndDate.getDate() + cycle.courseDays);
+        const breakElapsed = Math.floor((new Date() - courseEndDate) / (1000 * 60 * 60 * 24));
+        const breakLeft = Math.max(0, cycle.breakDays - breakElapsed);
+        const breakPct = Math.min((breakElapsed / cycle.breakDays) * 100, 100);
+        const resumeDate = new Date(courseEndDate);
+        resumeDate.setDate(resumeDate.getDate() + cycle.breakDays);
+        const resumeStr = resumeDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        return {
+          type: "break",
+          color: "#f87171",
+          breakElapsed: Math.max(0, breakElapsed),
+          breakTotal: cycle.breakDays,
+          breakLeft,
+          breakPct,
+          resumeDate: resumeStr,
+        };
       }
-      const pct = Math.round(progress);
-      return { type: "active", label: `${daysLeft} days remaining · ${pct}% of course`, color: "#a78bfa", detail: cycle.notes, progress };
+
+      const daysLeft = cycle.courseDays - daysTaken;
+      const progress = Math.min((daysTaken / cycle.courseDays) * 100, 100);
+      return { type: "active", color: "#a78bfa", daysLeft, progress };
     };
 
     return (
       <div>
         <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>💊 Supplement Tracker</div>
         <div style={{ color: "#334155", fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
-          Set a start date for each supplement to track your course accurately. Days elapsed = calendar days since you started.
+          Set a start date — every calendar day from that date counts as 1 day taken.
         </div>
         {uniqueItems.map(item => {
-          const daysTakenFromLog = countDaysTaken(item.id);
           const startDate = meta[item.id]?.startDate;
-          const daysElapsed = daysSince(startDate);
-          // Use elapsed days if start date is set, otherwise fall back to logged days
-          const daysActive = startDate ? (daysElapsed || 0) : daysTakenFromLog;
+          const daysTaken = startDate ? Math.max(0, daysSince(startDate)) : 0;
           const cycle = SUPPLEMENT_CYCLES[item.id];
-          const status = getStatus(item, daysActive, daysTakenFromLog);
-          const pctTaken = daysElapsed > 0 ? Math.round((daysTakenFromLog / daysElapsed) * 100) : null;
+          const status = getStatus(item, daysTaken, startDate);
 
           return (
-            <div key={item.id} style={{ marginBottom: 14, padding: "14px 16px", background: "rgba(255,255,255,0.03)", border: `1px solid ${status?.type === "break" ? "rgba(248,113,113,0.25)" : "rgba(255,255,255,0.07)"}`, borderRadius: 14 }}>
+            <div key={item.id} style={{
+              marginBottom: 14, padding: "14px 16px", borderRadius: 14,
+              background: status?.type === "break" ? "rgba(248,113,113,0.05)" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${status?.type === "break" ? "rgba(248,113,113,0.25)" : "rgba(255,255,255,0.07)"}`,
+            }}>
 
-              {/* Name + stats row */}
+              {/* Name + days taken */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div style={{ flex: 1, paddingRight: 10 }}>
-                  <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
+                  <div style={{ color: status?.type === "break" ? "#f87171" : "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
                   <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{item.dose}</div>
                 </div>
-                <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
-                  {startDate && (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ color: "#60a5fa", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{daysElapsed}</div>
-                      <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>elapsed</div>
+                {startDate && (
+                  <div style={{ textAlign: "center", flexShrink: 0 }}>
+                    <div style={{ color: status?.color || "#a78bfa", fontSize: 26, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>
+                      {status?.type === "break" ? status.breakElapsed : daysTaken}
                     </div>
-                  )}
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ color: "#a78bfa", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{daysTakenFromLog}</div>
-                    <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>taken</div>
+                    <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      {status?.type === "break" ? `of ${status.breakTotal} break days` : cycle?.courseDays > 0 ? `of ${cycle.courseDays} days` : "days"}
+                    </div>
                   </div>
-                  {pctTaken !== null && (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ color: pctTaken >= 80 ? "#34d399" : pctTaken >= 60 ? "#f59e0b" : "#f87171", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>{pctTaken}%</div>
-                      <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>adherence</div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
-              {/* Progress bar — based on elapsed days vs course */}
-              {status && cycle?.courseDays > 0 && (
+              {/* Progress bar */}
+              {startDate && status?.type === "active" && cycle?.courseDays > 0 && (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ color: "#334155", fontSize: 10 }}>Day 1</span>
+                    <span style={{ color: "#334155", fontSize: 10 }}>{status.daysLeft} days left</span>
                     <span style={{ color: "#334155", fontSize: 10 }}>Day {cycle.courseDays}</span>
                   </div>
                   <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: (status.progress || 0) + "%", background: `linear-gradient(90deg, ${status.color}99, ${status.color})`, borderRadius: 99, transition: "width 0.5s ease" }} />
+                    <div style={{ height: "100%", width: status.progress + "%", background: "linear-gradient(90deg, #818cf8, #a78bfa)", borderRadius: 99, transition: "width 0.5s ease" }} />
                   </div>
                 </div>
               )}
 
-              {/* Status badge + detail */}
-              {status && (
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ padding: "4px 12px", borderRadius: 99, fontSize: 11, background: status.color + "22", color: status.color, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
-                    {status.label}
-                  </span>
-                  {status.detail && (
-                    <div style={{ color: "#475569", fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>{status.detail}</div>
-                  )}
+              {/* Break progress bar */}
+              {status?.type === "break" && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ color: "#f87171", fontSize: 11, fontWeight: 600 }}>⛔ On break — {status.breakLeft} days until resume</span>
+                  </div>
+                  <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
+                    <div style={{ height: "100%", width: status.breakPct + "%", background: "linear-gradient(90deg, #f87171, #fbbf24)", borderRadius: 99, transition: "width 0.5s ease" }} />
+                  </div>
+                  <div style={{ color: "#475569", fontSize: 11 }}>
+                    Resume on <span style={{ color: "#fbbf24" }}>{status.resumeDate}</span>
+                  </div>
                 </div>
               )}
 
+              {/* Ongoing badge */}
+              {status?.type === "ongoing" && (
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 11, background: "rgba(52,211,153,0.15)", color: "#34d399" }}>✓ Ongoing — no break needed</span>
+                </div>
+              )}
+
+              {/* No date set */}
+              {status?.type === "nodate" && (
+                <div style={{ color: "#334155", fontSize: 11, marginBottom: 6 }}>Set start date to begin tracking</div>
+              )}
+
+              {/* Clinical note */}
+              {cycle && cycle.notes && (
+                <div style={{ color: "#334155", fontSize: 11, marginBottom: 8, lineHeight: 1.5 }}>{cycle.notes}</div>
+              )}
+
               {/* Start date picker */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                 {editingId === item.id ? (
                   <>
                     <input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)}
