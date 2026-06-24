@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 
+const labelStyle = { color: "oklch(0.56 0.012 90)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10, marginTop: 4 };
+const moodBtn = { padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "oklch(0.46 0.012 90)", transition: "all 0.2s" };
+const textareaStyle = { background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 14, padding: "12px 14px", color: "oklch(0.34 0.018 80)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", resize: "vertical", width: "100%", boxSizing: "border-box", outline: "none" };
+const statCard = { background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.88 0.008 80)", borderRadius: 20, padding: "16px", textAlign: "center", boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)" };
+const ghostBtn = { background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 999, padding: "8px 18px", color: "oklch(0.46 0.012 90)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" };
+
 const SECTIONS = ["morning", "supplements", "nutrition", "breathing", "evening", "reflection", "reports"];
 
 const SECTION_META = {
@@ -151,16 +157,9 @@ function AIAdvice({ prompt, context, trigger }) {
 }
 
 function MorningSection({ data, setData }) {
-  const [timerActive, React.useState(false)[1]] = React.useState(false);
-  const timerState = React.useState(false);
-  const timerActiveV = timerState[0];
-  const setTimerActiveV = timerState[1];
-  const timerLeftState = React.useState(5 * 60);
-  const timerLeft = timerLeftState[0];
-  const setTimerLeft = timerLeftState[1];
-  const timerDoneState = React.useState(false);
-  const timerDone = timerDoneState[0];
-  const setTimerDone = timerDoneState[1];
+  const [timerActive, setTimerActive] = React.useState(false);
+  const [timerLeft, setTimerLeft] = React.useState(5 * 60);
+  const [timerDone, setTimerDone] = React.useState(false);
   const timerRef = React.useRef(null);
   const endTimeRef = React.useRef(null);
   const audioCtxRef = React.useRef(null);
@@ -196,17 +195,17 @@ function MorningSection({ data, setData }) {
 
   const TIMER_DURATION = 5 * 60;
   const startTimer = () => {
-    if (timerActiveV) {
-      clearInterval(timerRef.current); setTimerActiveV(false); setTimerLeft(TIMER_DURATION); setTimerDone(false); endTimeRef.current = null; bellPlayedRef.current = false; return;
+    if (timerActive) {
+      clearInterval(timerRef.current); setTimerActive(false); setTimerLeft(TIMER_DURATION); setTimerDone(false); endTimeRef.current = null; bellPlayedRef.current = false; return;
     }
     unlockAudio(); bellPlayedRef.current = false;
     const endMs = Date.now() + TIMER_DURATION * 1000;
     endTimeRef.current = endMs;
-    setTimerActiveV(true); setTimerDone(false);
+    setTimerActive(true); setTimerDone(false);
     timerRef.current = setInterval(() => {
       const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
       setTimerLeft(remaining);
-      if (remaining <= 0 && !bellPlayedRef.current) { bellPlayedRef.current = true; clearInterval(timerRef.current); setTimerActiveV(false); setTimerDone(true); playBell(); }
+      if (remaining <= 0 && !bellPlayedRef.current) { bellPlayedRef.current = true; clearInterval(timerRef.current); setTimerActive(false); setTimerDone(true); playBell(); }
     }, 500);
   };
 
@@ -233,7 +232,7 @@ function MorningSection({ data, setData }) {
   const ringBg = timerDone
     ? `conic-gradient(oklch(0.53 0.09 165) 360deg, oklch(0.88 0.008 80) 360deg)`
     : `conic-gradient(${ACCENT} ${timerDeg}deg, oklch(0.88 0.008 80) ${timerDeg}deg)`;
-  const timerBtnLabel = timerDone ? "Again" : timerActiveV ? "Pause" : (timerLeft < TIMER_DURATION && timerLeft > 0 ? "Resume" : "Start");
+  const timerBtnLabel = timerDone ? "Again" : timerActive ? "Pause" : (timerLeft < TIMER_DURATION && timerLeft > 0 ? "Resume" : "Start");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1114,11 +1113,6 @@ function ReflectionSection({ data, setData }) {
 }
 
 // Styles
-const labelStyle = { color: "oklch(0.56 0.012 90)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10, marginTop: 4 };
-const moodBtn = { padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "oklch(0.46 0.012 90)", transition: "all 0.2s" };
-const textareaStyle = { background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 14, padding: "12px 14px", color: "oklch(0.34 0.018 80)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", resize: "vertical", width: "100%", boxSizing: "border-box", outline: "none" };
-const statCard = { background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.88 0.008 80)", borderRadius: 20, padding: "16px", textAlign: "center", boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)" };
-const ghostBtn = { background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 999, padding: "8px 18px", color: "oklch(0.46 0.012 90)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" };
 
 
 function ReportsSection() {
