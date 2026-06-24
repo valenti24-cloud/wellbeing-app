@@ -430,18 +430,18 @@ function SupplementsSection({ data, setData }) {
       {/* Header row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <div style={{ color: "#e2e8f0", fontSize: 15, fontWeight: 600 }}>
-            {totalTaken} / {totalAll} taken today
+          <div style={{ fontFamily: "'Newsreader', serif", fontSize: 17, color: "oklch(0.38 0.015 80)" }}>
+            {totalTaken} of {totalAll} taken today
           </div>
-          <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 99, marginTop: 6, width: 160 }}>
-            <div style={{ height: "100%", width: `${(totalTaken / totalAll) * 100}%`, background: "linear-gradient(90deg, #a78bfa, #34d399)", borderRadius: 99, transition: "width 0.4s ease" }} />
+          <div style={{ height: 4, background: "oklch(0.88 0.008 80)", borderRadius: 99, marginTop: 8, width: 160 }}>
+            <div style={{ height: "100%", width: `${(totalTaken / totalAll) * 100}%`, background: "oklch(0.6 0.1 65)", borderRadius: 99, transition: "width 0.4s ease" }} />
           </div>
         </div>
         <button onClick={startEdit} style={{
-          padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 500,
-          background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-          color: "#94a3b8", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-          display: "flex", alignItems: "center", gap: 6
+          padding: "8px 16px", borderRadius: 999, fontSize: 12, fontWeight: 500,
+          background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)",
+          color: "oklch(0.5 0.012 90)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+          display: "flex", alignItems: "center", gap: 6,
         }}>
           ✎ Edit schedule
         </button>
@@ -451,7 +451,7 @@ function SupplementsSection({ data, setData }) {
       {editMode && (
         <div style={{ marginBottom: 20, padding: 16, background: "oklch(0.6 0.1 65 / 0.06)", border: "1px solid oklch(0.6 0.1 65 / 0.25)", borderRadius: 16, animation: "fadeIn 0.3s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ color: "oklch(0.55 0.1 65)", fontSize: 13, fontWeight: 600 }}>✎ Editing your schedule</div>
+            <div style={{ fontFamily: "'Newsreader', serif", color: "oklch(0.38 0.015 80)", fontSize: 17 }}>✎ Editing schedule</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={cancelEdit} style={{ ...ghostBtn, fontSize: 12 }}>Cancel</button>
               <button onClick={saveChanges} style={{
@@ -495,52 +495,62 @@ function SupplementsSection({ data, setData }) {
       {/* Schedule groups */}
       {Object.entries(schedule).map(([groupKey, group]) => {
         const groupTaken = group.items.filter(i => taken.includes(i.id)).length;
+        const allDone = groupTaken === group.items.length;
         return (
-          <div key={groupKey} style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <span style={{ fontSize: 18 }}>{group.emoji}</span>
-              <div>
-                <div style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>{group.label}</div>
-                <div style={{ color: "#475569", fontSize: 11 }}>{group.subtitle}</div>
+          <div key={groupKey} style={{
+            marginBottom: 14,
+            background: "oklch(0.995 0.004 90)",
+            border: "1px solid oklch(0.88 0.008 80)",
+            borderRadius: 26,
+            boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)",
+            overflow: "hidden",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 20px 14px" }}>
+              <span style={{ fontSize: 20 }}>{group.emoji}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Newsreader', serif", fontSize: 18, color: "oklch(0.33 0.02 80)" }}>{group.label}</div>
+                <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: 1, color: "oklch(0.58 0.012 90)", marginTop: 2 }}>{group.subtitle}</div>
               </div>
               <div style={{
-                marginLeft: "auto", fontSize: 11, padding: "3px 10px", borderRadius: 99,
-                background: groupTaken === group.items.length ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.06)",
-                color: groupTaken === group.items.length ? "#34d399" : "#475569",
-                border: `1px solid ${groupTaken === group.items.length ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.08)"}`
+                fontSize: 12, padding: "4px 12px", borderRadius: 999, fontFamily: "'DM Mono', monospace", fontWeight: 500,
+                background: allDone ? "oklch(0.53 0.09 165 / 0.12)" : "oklch(0.6 0.1 65 / 0.08)",
+                color: allDone ? "oklch(0.45 0.09 165)" : "oklch(0.55 0.1 65)",
+                border: "1px solid " + (allDone ? "oklch(0.53 0.09 165 / 0.35)" : "oklch(0.6 0.1 65 / 0.25)"),
               }}>
                 {groupTaken}/{group.items.length}
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: 8, borderLeft: `2px solid ${group.color}22` }}>
-              {group.items.map(item => {
+            <div style={{ borderTop: "1px solid oklch(0.91 0.006 80)" }}>
+              {group.items.map((item, idx) => {
                 const isTaken = taken.includes(item.id);
                 const onBreak = isOnBreak(item.id);
                 return (
                   <button key={item.id} onClick={() => toggle(item.id)} style={{
-                    padding: "12px 14px", borderRadius: 12, textAlign: "left",
-                    background: onBreak ? "rgba(248,113,113,0.05)" : isTaken ? `${group.color}18` : "rgba(255,255,255,0.03)",
-                    border: onBreak ? "1px solid rgba(248,113,113,0.2)" : isTaken ? `1px solid ${group.color}55` : "1px solid rgba(255,255,255,0.07)",
-                    cursor: onBreak ? "not-allowed" : "pointer", transition: "all 0.2s", display: "flex", alignItems: "flex-start", gap: 12,
-                    opacity: onBreak ? 0.6 : 1,
+                    width: "100%", padding: "13px 20px", textAlign: "left",
+                    background: onBreak ? "oklch(0.6 0.15 25 / 0.05)" : isTaken ? "oklch(0.6 0.1 65 / 0.07)" : "transparent",
+                    border: "none",
+                    borderBottom: idx < group.items.length - 1 ? "1px solid oklch(0.92 0.005 80)" : "none",
+                    cursor: onBreak ? "not-allowed" : "pointer", transition: "background 0.15s",
+                    display: "flex", alignItems: "center", gap: 14, opacity: onBreak ? 0.65 : 1,
                   }}>
                     <div style={{
-                      width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
-                      background: onBreak ? "rgba(248,113,113,0.2)" : isTaken ? group.color : "transparent",
-                      border: onBreak ? "1.5px solid #f87171" : isTaken ? "none" : "1.5px solid #334155",
+                      width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                      background: onBreak ? "oklch(0.6 0.15 25 / 0.15)" : isTaken ? "oklch(0.6 0.1 65)" : "oklch(0.93 0.006 80)",
+                      border: "1.5px solid " + (onBreak ? "oklch(0.6 0.15 25 / 0.5)" : isTaken ? "oklch(0.6 0.1 65)" : "oklch(0.82 0.01 80)"),
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 11, color: onBreak ? "#f87171" : "#0a0a12", fontWeight: 700, transition: "all 0.2s"
+                      fontSize: 12, color: "white", fontWeight: 700, transition: "all 0.2s",
                     }}>
-                      {onBreak ? "✕" : isTaken ? "✓" : ""}
+                      {onBreak ? <span style={{ color: "oklch(0.5 0.15 25)", fontSize: 13 }}>✕</span> : isTaken ? "✓" : ""}
                     </div>
-                    <div>
-                      <div style={{ color: onBreak ? "#f87171" : isTaken ? "#e2e8f0" : "#94a3b8", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3, color: onBreak ? "oklch(0.5 0.12 25)" : "oklch(0.36 0.015 80)" }}>
                         {item.name}
                       </div>
-                      <div style={{ color: onBreak ? "#f87171" : isTaken ? group.color : "#475569", fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace" }}>
+                      <div style={{ fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace", color: onBreak ? "oklch(0.58 0.1 25)" : isTaken ? "oklch(0.6 0.1 65)" : "oklch(0.6 0.01 90)" }}>
                         {onBreak ? "⛔ On break — see Reports" : item.dose}
                       </div>
                     </div>
+                    {isTaken && !onBreak && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "oklch(0.6 0.1 65)", flexShrink: 0 }} />}
                   </button>
                 );
               })}
