@@ -138,10 +138,10 @@ function AIAdvice({ prompt, context, trigger }) {
       </button>
       {shown && !loading && advice && (
         <div style={{
-          marginTop: 12, padding: 16, background: "rgba(167,139,250,0.08)",
-          borderRadius: 14, borderLeft: "3px solid #a78bfa",
-          color: "#c4b5fd", fontSize: 14, lineHeight: 1.75,
-          fontFamily: "'DM Sans', sans-serif", animation: "fadeIn 0.4s ease"
+          marginTop: 12, padding: 16, background: "oklch(0.6 0.1 65 / 0.08)",
+          borderRadius: 18, borderLeft: "3px solid oklch(0.6 0.1 65)",
+          color: "oklch(0.42 0.015 80)", fontSize: 14, lineHeight: 1.75,
+          fontFamily: "'Newsreader', serif", animation: "fadeIn 0.4s ease"
         }}>
           {advice}
         </div>
@@ -151,11 +151,16 @@ function AIAdvice({ prompt, context, trigger }) {
 }
 
 function MorningSection({ data, setData }) {
-  const TIMER_DURATION = 5 * 60;
-  const [timerActive, setTimerActive] = React.useState(false);
-  const [timerLeft, setTimerLeft] = React.useState(TIMER_DURATION);
-  const [timerDone, setTimerDone] = React.useState(false);
-  const [endTimeDisplay, setEndTimeDisplay] = React.useState("");
+  const [timerActive, React.useState(false)[1]] = React.useState(false);
+  const timerState = React.useState(false);
+  const timerActiveV = timerState[0];
+  const setTimerActiveV = timerState[1];
+  const timerLeftState = React.useState(5 * 60);
+  const timerLeft = timerLeftState[0];
+  const setTimerLeft = timerLeftState[1];
+  const timerDoneState = React.useState(false);
+  const timerDone = timerDoneState[0];
+  const setTimerDone = timerDoneState[1];
   const timerRef = React.useRef(null);
   const endTimeRef = React.useRef(null);
   const audioCtxRef = React.useRef(null);
@@ -163,220 +168,186 @@ function MorningSection({ data, setData }) {
 
   React.useEffect(() => () => clearInterval(timerRef.current), []);
 
-  // iOS-safe bell: uses AudioContext created & resumed on the START tap gesture
-  const initAudio = () => {
+  const unlockAudio = () => {
     try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtxRef.current.state === "suspended") {
-        audioCtxRef.current.resume();
-      }
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
     } catch(e) {}
   };
 
   const playBell = () => {
     try {
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
+      const ctx = audioCtxRef.current; if (!ctx) return;
       if (ctx.state === "suspended") ctx.resume();
-      const ring = (delayS) => {
-        const osc = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const g1 = ctx.createGain();
-        const g2 = ctx.createGain();
-        osc.connect(g1); g1.connect(ctx.destination);
-        osc2.connect(g2); g2.connect(ctx.destination);
-        const t = ctx.currentTime + delayS;
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(528, t);
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(528 * 2.756, t);
-        g1.gain.setValueAtTime(0.0001, t);
-        g1.gain.linearRampToValueAtTime(0.8, t + 0.02);
-        g1.gain.exponentialRampToValueAtTime(0.0001, t + 4.0);
-        g2.gain.setValueAtTime(0.0001, t);
-        g2.gain.linearRampToValueAtTime(0.3, t + 0.02);
-        g2.gain.exponentialRampToValueAtTime(0.0001, t + 2.0);
-        osc.start(t); osc.stop(t + 4.1);
-        osc2.start(t); osc2.stop(t + 2.1);
+      const ring = (d) => {
+        const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination); o2.connect(g2); g2.connect(ctx.destination);
+        const t = ctx.currentTime + d;
+        o.type = "sine"; o.frequency.setValueAtTime(528, t);
+        o2.type = "sine"; o2.frequency.setValueAtTime(528*2.756, t);
+        g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.8,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+4.0);
+        g2.gain.setValueAtTime(0.0001,t); g2.gain.linearRampToValueAtTime(0.3,t+0.02); g2.gain.exponentialRampToValueAtTime(0.0001,t+2.0);
+        o.start(t); o.stop(t+4.1); o2.start(t); o2.stop(t+2.1);
       };
       ring(0); ring(1.5); ring(3.0);
     } catch(e) {}
-    try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
+    try { if (navigator.vibrate) navigator.vibrate([300,150,300,150,300]); } catch(e) {}
   };
 
+  const TIMER_DURATION = 5 * 60;
   const startTimer = () => {
-    if (timerActive) {
-      clearInterval(timerRef.current);
-      setTimerActive(false);
-      setTimerLeft(TIMER_DURATION);
-      setTimerDone(false);
-      setEndTimeDisplay("");
-      endTimeRef.current = null;
-      bellPlayedRef.current = false;
-      return;
+    if (timerActiveV) {
+      clearInterval(timerRef.current); setTimerActiveV(false); setTimerLeft(TIMER_DURATION); setTimerDone(false); endTimeRef.current = null; bellPlayedRef.current = false; return;
     }
-
-    // Init audio on this tap — the ONLY way iOS allows it
-    initAudio();
-    bellPlayedRef.current = false;
-
-    // Calculate real end time
+    unlockAudio(); bellPlayedRef.current = false;
     const endMs = Date.now() + TIMER_DURATION * 1000;
     endTimeRef.current = endMs;
-
-    // Show end time as real clock time e.g. "5:01 PM"
-    const endDate = new Date(endMs);
-    const hrs = endDate.getHours();
-    const mins = String(endDate.getMinutes()).padStart(2, "0");
-    const ampm = hrs >= 12 ? "PM" : "AM";
-    const displayHr = hrs % 12 || 12;
-    setEndTimeDisplay(`${displayHr}:${mins} ${ampm}`);
-
-    setTimerActive(true);
-    setTimerDone(false);
-
-    // Poll every 500ms using real clock — survives screen lock
+    setTimerActiveV(true); setTimerDone(false);
     timerRef.current = setInterval(() => {
       const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
       setTimerLeft(remaining);
-      if (remaining <= 0 && !bellPlayedRef.current) {
-        bellPlayedRef.current = true;
-        clearInterval(timerRef.current);
-        setTimerActive(false);
-        setTimerDone(true);
-        playBell();
-      }
+      if (remaining <= 0 && !bellPlayedRef.current) { bellPlayedRef.current = true; clearInterval(timerRef.current); setTimerActiveV(false); setTimerDone(true); playBell(); }
     }, 500);
   };
 
-  const mins = String(Math.floor(timerLeft / 60)).padStart(2, "0");
-  const secs = String(timerLeft % 60).padStart(2, "0");
-  const progress = ((5 * 60 - timerLeft) / (5 * 60)) * 100;
+  const ACCENT = "oklch(0.6 0.1 65)";
+  const ACCENT_TINT = "oklch(0.6 0.1 65 / 0.12)";
+  const card = { background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.88 0.008 80)", borderRadius: 26, boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)" };
+
+  const moodMeta = [
+    { label: "Heavy", color: "oklch(0.6 0.1 25)" },
+    { label: "Tired", color: "oklch(0.68 0.09 60)" },
+    { label: "Okay",  color: "oklch(0.78 0.09 95)" },
+    { label: "Good",  color: "oklch(0.66 0.09 165)" },
+    { label: "Bright",color: "oklch(0.64 0.1 215)" },
+  ];
+
+  const energyLabels = ["Drained", "Low", "Steady", "Good", "Vibrant"];
+  const sleep = parseFloat(data.hours || 7);
+  const sleepNote = sleep < 6 ? "Short rest" : sleep < 7.5 ? "Decent" : sleep <= 9 ? "Well rested" : "Long sleep";
+
+  const timerMins = Math.floor(timerLeft / 60);
+  const timerSecs = String(timerLeft % 60).padStart(2, "0");
+  const timerFrac = (TIMER_DURATION - timerLeft) / TIMER_DURATION;
+  const timerDeg = Math.round(timerFrac * 360);
+  const ringBg = timerDone
+    ? `conic-gradient(oklch(0.53 0.09 165) 360deg, oklch(0.88 0.008 80) 360deg)`
+    : `conic-gradient(${ACCENT} ${timerDeg}deg, oklch(0.88 0.008 80) ${timerDeg}deg)`;
+  const timerBtnLabel = timerDone ? "Again" : timerActiveV ? "Pause" : (timerLeft < TIMER_DURATION && timerLeft > 0 ? "Resume" : "Start");
 
   return (
-    <div>
-      {/* Morning rituals */}
-      <p style={labelStyle}>Morning Rituals</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-      {/* Water check */}
-      <button onClick={() => setData({ ...data, water: !data.water })} style={{
-        width: "100%", padding: "14px 16px", borderRadius: 14, textAlign: "left",
-        background: data.water ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.03)",
-        border: data.water ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(255,255,255,0.08)",
-        cursor: "pointer", display: "flex", alignItems: "center", gap: 14,
-        marginBottom: 12, transition: "all 0.2s",
-      }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-          background: data.water ? "#34d399" : "transparent",
-          border: data.water ? "none" : "1.5px solid #334155",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 14, transition: "all 0.2s",
-        }}>
-          {data.water ? "✓" : ""}
+      {/* MOOD */}
+      <div style={{ ...card, padding: "22px 20px 18px" }}>
+        <div style={labelStyle}>How you woke up</div>
+        <div style={{ display: "flex", gap: 7 }}>
+          {moodMeta.map((m, i) => {
+            const on = (data.moodIdx ?? 2) === i;
+            return (
+              <button key={i} onClick={() => setData({ ...data, moodIdx: i, mood: m.label })} style={{
+                flex: 1, minHeight: 78, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 11,
+                background: on ? ACCENT_TINT : "transparent",
+                border: "1px solid " + (on ? ACCENT : "oklch(0.87 0.008 80)"),
+                borderRadius: 18, cursor: "pointer", padding: "8px 2px",
+              }}>
+                <span style={{ width: 30, height: 30, borderRadius: "50%", background: m.color, display: "block", boxShadow: on ? "0 4px 14px " + m.color + "55" : "none" }} />
+                <span style={{ fontSize: 11, fontWeight: 500, color: on ? "oklch(0.34 0.018 80)" : "oklch(0.58 0.012 90)", fontFamily: "'DM Sans', sans-serif" }}>{m.label}</span>
+              </button>
+            );
+          })}
         </div>
-        <div>
-          <div style={{ color: data.water ? "#34d399" : "#94a3b8", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
-            🍋 Warm water with lime juice
-          </div>
-          <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>1 glass on empty stomach</div>
-        </div>
-      </button>
+      </div>
 
-      {/* Eye mask timer */}
-      <div style={{
-        padding: "14px 16px", borderRadius: 14, marginBottom: 20,
-        background: timerDone ? "rgba(52,211,153,0.12)" : timerActive ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.03)",
-        border: timerDone ? "1px solid rgba(52,211,153,0.4)" : timerActive ? "1px solid rgba(167,139,250,0.3)" : "1px solid rgba(255,255,255,0.08)",
-        transition: "all 0.3s",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: timerActive ? 12 : 0 }}>
-          <div>
-            <div style={{ color: timerDone ? "#34d399" : timerActive ? "#c4b5fd" : "#94a3b8", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
-              😌 Warm eye mask
-            </div>
-            {timerActive && endTimeDisplay
-              ? <div style={{ color: "#a78bfa", fontSize: 11, marginTop: 2 }}>Ends at {endTimeDisplay}</div>
-              : <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>5 minute timer</div>
-            }
+      {/* SLEEP + ENERGY */}
+      <div style={{ display: "flex", gap: 14 }}>
+        {/* Sleep */}
+        <div style={{ ...card, flex: 1, padding: "20px 18px" }}>
+          <div style={labelStyle}>Sleep</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 3, margin: "12px 0 3px" }}>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 34, fontWeight: 500, color: "oklch(0.34 0.018 80)", lineHeight: 1 }}>{sleep % 1 === 0 ? sleep : sleep.toFixed(1)}</span>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 16, color: "oklch(0.6 0.012 90)" }}>h</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {timerActive && (
-              <div style={{ color: "#c4b5fd", fontSize: 30, fontFamily: "'DM Mono', monospace", fontWeight: 200, letterSpacing: -1 }}>
-                {mins}:{secs}
-              </div>
-            )}
-            {timerDone && (
-              <div style={{ color: "#34d399", fontSize: 20 }}>✓ Done!</div>
-            )}
-            <button onClick={startTimer} style={{
-              padding: "8px 16px", borderRadius: 10, fontSize: 12, fontWeight: 600,
-              background: timerActive ? "rgba(239,68,68,0.15)" : timerDone ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg, #a78bfa, #818cf8)",
-              border: timerActive ? "1px solid rgba(239,68,68,0.3)" : "none",
-              color: timerActive ? "#f87171" : timerDone ? "#475569" : "#fff",
-              cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-            }}>
-              {timerActive ? "■ Stop" : timerDone ? "↺ Again" : "▶ Start"}
-            </button>
+          <div style={{ fontSize: 12.5, color: ACCENT, marginBottom: 16 }}>{sleepNote}</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[["−", -0.5], ["+", 0.5]].map(([label, delta]) => (
+              <button key={label} onClick={() => setData({ ...data, hours: Math.min(12, Math.max(0, sleep + delta)) })} style={{
+                width: 46, height: 46, borderRadius: 14, border: "1px solid oklch(0.86 0.01 80)",
+                background: "oklch(0.97 0.006 90)", color: "oklch(0.4 0.015 80)", fontSize: 22, cursor: "pointer",
+              }}>{label}</button>
+            ))}
           </div>
         </div>
-        {timerActive && (
-          <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
-            <div style={{
-              height: "100%", borderRadius: 99,
-              width: progress + "%",
-              background: "linear-gradient(90deg, #a78bfa, #34d399)",
-              transition: "width 1s linear",
-            }} />
+
+        {/* Energy */}
+        <div style={{ ...card, flex: 1, padding: "20px 18px", display: "flex", flexDirection: "column" }}>
+          <div style={labelStyle}>Energy</div>
+          <div style={{ fontFamily: "'Newsreader', serif", fontSize: 21, color: "oklch(0.34 0.018 80)", margin: "12px 0 16px" }}>
+            {energyLabels[data.energy ?? 2]}
           </div>
-        )}
+          <div style={{ display: "flex", gap: 6, marginTop: "auto" }}>
+            {energyLabels.map((_, i) => (
+              <button key={i} onClick={() => setData({ ...data, energy: i })} style={{
+                flex: 1, height: 40, borderRadius: 9, border: "none",
+                background: i <= (data.energy ?? 2) ? ACCENT : "oklch(0.88 0.008 80)",
+                cursor: "pointer",
+              }} />
+            ))}
+          </div>
+        </div>
       </div>
 
-      <p style={labelStyle}>How are you feeling this morning?</p>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-        {["😴 Tired", "😐 Okay", "🙂 Good", "😊 Great", "⚡ Energised"].map(m => (
-          <button key={m} onClick={() => setData({ ...data, mood: m })} style={{
-            ...moodBtn, background: data.mood === m ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.05)",
-            border: data.mood === m ? "1px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)"
-          }}>{m}</button>
-        ))}
+      {/* WATER RITUAL */}
+      <div style={{ ...card, padding: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={labelStyle}>Begin with water</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12.5, color: ACCENT }}>{data.water || 0} of 4</div>
+        </div>
+        <div style={{ display: "flex", gap: 11 }}>
+          {[0,1,2,3].map(i => {
+            const filled = i < (data.water || 0);
+            return (
+              <button key={i} onClick={() => setData({ ...data, water: i + 1 === data.water ? i : i + 1 })} style={{
+                flex: 1, height: 54, borderRadius: 14, border: "1px solid " + (filled ? ACCENT : "oklch(0.86 0.01 80)"),
+                background: filled ? ACCENT_TINT : "oklch(0.97 0.006 90)",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ width: 14, height: 18, borderRadius: "4px 4px 6px 6px", background: filled ? ACCENT : "oklch(0.78 0.008 90)", display: "block" }} />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <p style={labelStyle}>Sleep quality last night</p>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {["Poor", "Fair", "Good", "Great"].map(s => (
-          <button key={s} onClick={() => setData({ ...data, sleep: s })} style={{
-            ...moodBtn, background: data.sleep === s ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.05)",
-            border: data.sleep === s ? "1px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)"
-          }}>{s}</button>
-        ))}
+      {/* EYE MASK TIMER */}
+      <div style={{ ...card, padding: "22px 20px", display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ position: "relative", width: 84, height: 84, flexShrink: 0, borderRadius: "50%", background: ringBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "absolute", inset: 7, borderRadius: "50%", background: "oklch(0.995 0.004 90)" }} />
+          <span style={{ position: "relative", fontFamily: "'DM Mono', monospace", fontSize: 16, fontWeight: 500, color: timerDone ? "oklch(0.53 0.09 165)" : "oklch(0.34 0.018 80)" }}>
+            {timerDone ? "✓" : `${timerMins}:${timerSecs}`}
+          </span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Newsreader', serif", fontSize: 20, color: "oklch(0.34 0.018 80)", marginBottom: 3 }}>Eye-mask reset</div>
+          <div style={{ fontSize: 13, color: "oklch(0.54 0.012 90)", marginBottom: 14 }}>A few minutes in the dark before screens.</div>
+          <button onClick={startTimer} style={{
+            display: "inline-flex", alignItems: "center", gap: 8, height: 46, padding: "0 22px",
+            borderRadius: 999, border: "none", background: timerDone ? "oklch(0.53 0.09 165)" : ACCENT,
+            color: "white", fontSize: 14.5, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+          }}>{timerBtnLabel}</button>
+        </div>
       </div>
 
-      <p style={labelStyle}>Hours slept</p>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-        <input type="range" min={3} max={12} step={0.5} value={data.hours || 7}
-          onChange={e => setData({ ...data, hours: e.target.value })}
-          style={{ flex: 1, accentColor: "#a78bfa" }} />
-        <span style={{ color: "#e2e8f0", fontFamily: "'DM Mono', monospace", fontSize: 18, minWidth: 40 }}>{data.hours || 7}h</span>
-      </div>
-
-      <p style={labelStyle}>Today's main tasks / intentions</p>
-      <textarea value={data.tasks || ""} onChange={e => setData({ ...data, tasks: e.target.value })}
-        placeholder="What do you want to accomplish today?"
-        style={textareaStyle} rows={3} />
-
-      <p style={labelStyle}>Energy level (1–10)</p>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-        <input type="range" min={1} max={10} value={data.energy || 5}
-          onChange={e => setData({ ...data, energy: e.target.value })}
-          style={{ flex: 1, accentColor: "#a78bfa" }} />
-        <span style={{ color: "#e2e8f0", fontFamily: "'DM Mono', monospace", fontSize: 18, minWidth: 24 }}>{data.energy || 5}</span>
+      {/* TASKS */}
+      <div style={{ ...card, padding: "20px" }}>
+        <div style={labelStyle}>Today's intentions</div>
+        <textarea value={data.tasks || ""} onChange={e => setData({ ...data, tasks: e.target.value })}
+          placeholder="What do you want to accomplish today?"
+          style={{ ...textareaStyle, background: "transparent", border: "none", padding: "8px 0", fontSize: 15, fontFamily: "'Newsreader', serif", resize: "none" }} rows={3} />
       </div>
 
       <AIAdvice
-        prompt="Based on this person's morning check-in data, give personalised morning wellbeing advice. Comment on their sleep, energy, and today's tasks. Suggest how to approach the day for optimal wellbeing and performance."
+        prompt="Based on this person's morning check-in, give warm personalised advice. Comment on their sleep, energy, mood and intentions. Help them approach the day with clarity."
         context={data}
         trigger="morning"
       />
@@ -479,15 +450,15 @@ function SupplementsSection({ data, setData }) {
 
       {/* Edit mode */}
       {editMode && (
-        <div style={{ marginBottom: 20, padding: 16, background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 16, animation: "fadeIn 0.3s ease" }}>
+        <div style={{ marginBottom: 20, padding: 16, background: "oklch(0.6 0.1 65 / 0.06)", border: "1px solid oklch(0.6 0.1 65 / 0.25)", borderRadius: 16, animation: "fadeIn 0.3s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ color: "#fbbf24", fontSize: 13, fontWeight: 600 }}>✎ Editing your schedule</div>
+            <div style={{ color: "oklch(0.55 0.1 65)", fontSize: 13, fontWeight: 600 }}>✎ Editing your schedule</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={cancelEdit} style={{ ...ghostBtn, fontSize: 12 }}>Cancel</button>
               <button onClick={saveChanges} style={{
                 padding: "7px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600,
-                background: "linear-gradient(135deg, #a78bfa, #818cf8)",
-                border: "none", color: "#fff", cursor: "pointer",
+                background: "oklch(0.6 0.1 65)",
+                border: "none", color: "white", cursor: "pointer",
                 fontFamily: "'DM Sans', sans-serif"
               }}>
                 Save
@@ -1143,11 +1114,11 @@ function ReflectionSection({ data, setData }) {
 }
 
 // Styles
-const labelStyle = { color: "#94a3b8", fontSize: 12, fontFamily: "'DM Sans', sans-serif", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 10, marginTop: 4 };
-const moodBtn = { padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#e2e8f0", transition: "all 0.2s" };
-const textareaStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 14px", color: "#e2e8f0", fontSize: 14, fontFamily: "'DM Sans', sans-serif", resize: "vertical", width: "100%", boxSizing: "border-box", outline: "none" };
-const statCard = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "16px", textAlign: "center" };
-const ghostBtn = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 16px", color: "#94a3b8", fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" };
+const labelStyle = { color: "oklch(0.56 0.012 90)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10, marginTop: 4 };
+const moodBtn = { padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "oklch(0.46 0.012 90)", transition: "all 0.2s" };
+const textareaStyle = { background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 14, padding: "12px 14px", color: "oklch(0.34 0.018 80)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", resize: "vertical", width: "100%", boxSizing: "border-box", outline: "none" };
+const statCard = { background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.88 0.008 80)", borderRadius: 20, padding: "16px", textAlign: "center", boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)" };
+const ghostBtn = { background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 999, padding: "8px 18px", color: "oklch(0.46 0.012 90)", fontSize: 13, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" };
 
 
 function ReportsSection() {
@@ -1753,19 +1724,20 @@ export default function WellbeingCompanion() {
   return (
     <ApiKeyContext.Provider value={apiKey}>
     <div style={{
-      minHeight: "100vh", background: "#0a0a12",
-      fontFamily: "'DM Sans', sans-serif", color: "#e2e8f0",
+      minHeight: "100vh", background: "#f4efe6",
+      fontFamily: "'DM Sans', system-ui, sans-serif", color: "oklch(0.34 0.018 90)",
+      position: "relative",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
         * { box-sizing: border-box; }
-        input, textarea { color: #e2e8f0 !important; }
-        input::placeholder, textarea::placeholder { color: #334155 !important; }
+        input, textarea { color: oklch(0.34 0.018 80) !important; }
+        input::placeholder, textarea::placeholder { color: oklch(0.7 0.01 90) !important; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+        @keyframes glowpulse { 0%,100% { opacity:0.8; } 50% { opacity:1; } }
+        ::-webkit-scrollbar { width: 0; height: 0; }
       `}</style>
+      <div style={{ position: "fixed", inset: 0, background: "radial-gradient(118% 78% at 50% -10%, oklch(0.88 0.05 70 / 0.55), transparent 58%)", animation: "glowpulse 9s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
 
       {/* Header */}
       <div style={{ padding: "28px 24px 0", maxWidth: 600, margin: "0 auto" }}>
@@ -1792,44 +1764,28 @@ export default function WellbeingCompanion() {
           </div>
         )}
 
-        {/* Progress dots */}
-        <div style={{ display: "flex", gap: 6, marginTop: 16, marginBottom: 24 }}>
-          {SECTIONS.map(s => (
-            <div key={s} style={{
-              height: 3, flex: 1, borderRadius: 99,
-              background: s === activeSection ? "#a78bfa" : sectionData[s] ? "rgba(167,139,250,0.4)" : "rgba(255,255,255,0.08)",
-              transition: "all 0.3s"
-            }} />
-          ))}
-        </div>
       </div>
 
       {/* Nav */}
-      <div style={{ overflowX: "auto", padding: "0 24px", maxWidth: 600, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 8, paddingBottom: 16, minWidth: "max-content" }}>
+      <div style={{ position: "relative", zIndex: 1, overflowX: "auto", padding: "18px 24px 16px", maxWidth: 600, margin: "0 auto" }}>
+        <div style={{ display: "flex", gap: 9, minWidth: "max-content" }}>
           {SECTIONS.map(s => (
             <button key={s} onClick={() => setActiveSection(s)} style={{
-              padding: "8px 16px", borderRadius: 99, fontSize: 13, fontWeight: 500,
-              background: activeSection === s ? "rgba(167,139,250,0.2)" : "transparent",
-              border: activeSection === s ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.07)",
-              color: activeSection === s ? "#c4b5fd" : "#64748b", cursor: "pointer",
-              transition: "all 0.2s", whiteSpace: "nowrap"
+              flexShrink: 0, display: "flex", alignItems: "center", gap: 7,
+              height: 38, padding: "0 15px", borderRadius: 999, fontSize: 13, fontWeight: 500,
+              background: activeSection === s ? "oklch(0.6 0.1 65)" : "oklch(0.99 0.004 90)",
+              border: "1px solid " + (activeSection === s ? "oklch(0.6 0.1 65)" : "oklch(0.85 0.01 80)"),
+              color: activeSection === s ? "white" : "oklch(0.46 0.012 90)",
+              cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif",
             }}>
-              {SECTION_META[s].emoji} {SECTION_META[s].label}
+              <span style={{ fontSize: 14, lineHeight: 1 }}>{SECTION_META[s].emoji}</span>{SECTION_META[s].label}
             </button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: "0 auto", padding: "8px 24px 40px" }}>
-        <div style={{ marginBottom: 20 }}>
-          <h2 style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 600, color: "#f1f5f9" }}>
-            {SECTION_META[activeSection].emoji} {SECTION_META[activeSection].label}
-          </h2>
-          <div style={{ color: "#475569", fontSize: 12 }}>{SECTION_META[activeSection].time}</div>
-        </div>
-
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 600, margin: "0 auto", padding: "6px 20px 40px" }}>
         <div style={{ animation: "fadeIn 0.3s ease" }} key={activeSection}>
           {activeSection === "morning" && <MorningSection data={sectionData.morning || {}} setData={setData("morning")} />}
           {activeSection === "supplements" && <SupplementsSection data={sectionData.supplements || {}} setData={setData("supplements")} />}
@@ -1851,7 +1807,7 @@ export default function WellbeingCompanion() {
           <button
             onClick={() => setActiveSection(SECTIONS[SECTIONS.indexOf(activeSection) + 1])}
             disabled={activeSection === SECTIONS[SECTIONS.length - 1]}
-            style={{ ...ghostBtn, background: "rgba(167,139,250,0.15)", borderColor: "rgba(167,139,250,0.3)", color: "#c4b5fd", opacity: activeSection === SECTIONS[SECTIONS.length - 1] ? 0.3 : 1 }}>
+            style={{ ...ghostBtn, background: "oklch(0.6 0.1 65)", border: "none", color: "white", fontWeight: 600, opacity: activeSection === SECTIONS[SECTIONS.length - 1] ? 0.3 : 1 }}>
             Next →
           </button>
         </div>
