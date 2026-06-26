@@ -579,6 +579,7 @@ function NutritionSection({ data, setData }) {
   const [analyzing, setAnalyzing] = React.useState(false);
   const [draft, setDraft] = React.useState(null); // { name, calories, protein, sugar } pending approval
   const [photoError, setPhotoError] = React.useState("");
+  const [textInput, setTextInput] = React.useState("");
   const fileInputRef = React.useRef(null);
 
   const meals = data.meals || [{ name: "", calories: "", protein: "", sugar: "" }];
@@ -631,10 +632,47 @@ function NutritionSection({ data, setData }) {
   };
 
   const approveDraft = () => {
-    // Save ONLY the 3 figures + description. Photo already discarded (never stored).
+    // Save ONLY the 3 figures + description. Photo/text already discarded (never stored).
     const cleanMeals = meals.filter(m => m.name || m.calories || m.protein || m.sugar);
     setData({ ...data, meals: [...cleanMeals, { name: draft.name, calories: draft.calories, protein: draft.protein, sugar: draft.sugar }] });
     setDraft(null);
+    setTextInput("");
+  };
+
+  const analyzeText = async () => {
+    if (!apiKey) { setPhotoError("Set your API key first (top right)."); return; }
+    if (!textInput.trim()) return;
+    setPhotoError("");
+    setAnalyzing(true);
+    setDraft(null);
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-5",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: "A person ate: \"" + textInput + "\". Estimate the nutrition for a standard typical portion of this food. Respond ONLY with a JSON object, no markdown, no other text, in exactly this format: {\"name\": \"short dish name (max 5 words)\", \"calories\": number, \"protein\": number, \"sugar\": number}. Calories in kcal, protein and sugar in grams, all integers. Use realistic standard restaurant/home portion sizes."
+          }]
+        })
+      });
+      const dataResp = await response.json();
+      if (dataResp.error) { setPhotoError("API: " + dataResp.error.message); setAnalyzing(false); return; }
+      let text = (dataResp.content || []).map(c => c.text || "").join("").trim();
+      text = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(text);
+      setDraft({
+        name: parsed.name || textInput,
+        calories: String(parsed.calories || 0),
+        protein: String(parsed.protein || 0),
+        sugar: String(parsed.sugar || 0),
+      });
+    } catch (err) {
+      setPhotoError("Could not estimate. Try again or add manually.");
+    }
+    setAnalyzing(false);
   };
 
   const updateMeal = (i, field, val) => {
@@ -705,16 +743,41 @@ function NutritionSection({ data, setData }) {
         onChange={e => { const f = e.target.files?.[0]; if (f) analyzePhoto(f); e.target.value = ""; }} />
 
       {!draft && (
-        <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} style={{
-          width: "100%", padding: "16px", borderRadius: 18, marginBottom: 16,
-          background: analyzing ? "oklch(0.95 0.006 90)" : "oklch(0.6 0.1 65 / 0.08)",
-          border: "1px dashed " + (analyzing ? "oklch(0.8 0.01 80)" : "oklch(0.6 0.1 65 / 0.5)"),
-          color: analyzing ? "oklch(0.55 0.012 90)" : "oklch(0.5 0.1 65)",
-          cursor: analyzing ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-        }}>
-          {analyzing ? "✦ Analyzing photo..." : "📷 Take or upload a meal photo"}
-        </button>
+        <div style={{ marginBottom: 16 }}>
+          <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} style={{
+            width: "100%", padding: "16px", borderRadius: 18, marginBottom: 10,
+            background: analyzing ? "oklch(0.95 0.006 90)" : "oklch(0.6 0.1 65 / 0.08)",
+            border: "1px dashed " + (analyzing ? "oklch(0.8 0.01 80)" : "oklch(0.6 0.1 65 / 0.5)"),
+            color: analyzing ? "oklch(0.55 0.012 90)" : "oklch(0.5 0.1 65)",
+            cursor: analyzing ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          }}>
+            {analyzing ? "✦ Analyzing..." : "📷 Take or upload a meal photo"}
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 10px" }}>
+            <div style={{ flex: 1, height: 1, background: "oklch(0.88 0.008 80)" }} />
+            <span style={{ color: "oklch(0.66 0.01 90)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>OR DESCRIBE IT</span>
+            <div style={{ flex: 1, height: 1, background: "oklch(0.88 0.008 80)" }} />
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") analyzeText(); }}
+              placeholder="e.g. tiramisu, chicken salad..."
+              style={{ ...textareaStyle, flex: 1, padding: "12px 14px", fontSize: 14 }}
+            />
+            <button onClick={analyzeText} disabled={analyzing || !textInput.trim()} style={{
+              padding: "0 20px", borderRadius: 14, border: "none",
+              background: (analyzing || !textInput.trim()) ? "oklch(0.9 0.006 80)" : "oklch(0.6 0.1 65)",
+              color: (analyzing || !textInput.trim()) ? "oklch(0.6 0.01 90)" : "white",
+              fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+              cursor: (analyzing || !textInput.trim()) ? "default" : "pointer",
+            }}>Estimate</button>
+          </div>
+        </div>
       )}
 
       {photoError && <div style={{ color: "oklch(0.58 0.15 25)", fontSize: 12, marginBottom: 14, padding: "8px 12px", background: "oklch(0.58 0.15 25 / 0.08)", borderRadius: 10 }}>{photoError}</div>}
