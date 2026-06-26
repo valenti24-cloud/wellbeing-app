@@ -467,7 +467,7 @@ function SupplementsSection({ data, setData }) {
 
           {Object.entries(editedSchedule).map(([groupKey, group]) => (
             <div key={groupKey} style={{ marginBottom: 16 }}>
-              <div style={{ color: "#64748b", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
+              <div style={{ color: "oklch(0.56 0.012 90)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 8 }}>
                 {group.emoji} {group.label}
               </div>
               {group.items.map((item, idx) => (
@@ -597,16 +597,16 @@ function NutritionSection({ data, setData }) {
   const protPct = Math.min((totalProt  / protGoal)  * 100, 100);
   const sugPct  = Math.min((totalSugar / sugGoal)   * 100, 100);
 
-  const calColor  = totalCals  > calGoal  * 1.1 ? "#f87171" : totalCals  >= calGoal  * 0.85 ? "#34d399" : "#f59e0b";
-  const protColor = totalProt  >= protGoal * 0.9 ? "#34d399" : totalProt  >= protGoal * 0.6  ? "#f59e0b" : "#f87171";
-  const sugColor  = totalSugar > sugGoal          ? "#f87171" : totalSugar > sugGoal  * 0.75 ? "#f59e0b" : "#34d399";
+  const calColor  = totalCals  > calGoal  * 1.1 ? "oklch(0.58 0.15 25)" : totalCals  >= calGoal  * 0.85 ? "oklch(0.53 0.09 165)" : "oklch(0.62 0.12 65)";
+  const protColor = totalProt  >= protGoal * 0.9 ? "oklch(0.53 0.09 165)" : totalProt  >= protGoal * 0.6  ? "oklch(0.62 0.12 65)" : "oklch(0.58 0.15 25)";
+  const sugColor  = totalSugar > sugGoal          ? "oklch(0.58 0.15 25)" : totalSugar > sugGoal  * 0.75 ? "oklch(0.62 0.12 65)" : "oklch(0.53 0.09 165)";
 
   const StatCard = ({ label, value, unit, goal, goalUnit, pct, color }) => (
     <div style={{ ...statCard, position: "relative", overflow: "hidden" }}>
-      <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+      <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
       <div style={{ color, fontSize: 26, fontFamily: "'DM Mono', monospace", fontWeight: 400, lineHeight: 1 }}>{value}<span style={{ fontSize: 13, marginLeft: 2 }}>{unit}</span></div>
-      <div style={{ color: "#334155", fontSize: 10, marginTop: 4, marginBottom: 8 }}>goal: {goal}{goalUnit}</div>
-      <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+      <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 10, marginTop: 4, marginBottom: 8 }}>goal: {goal}{goalUnit}</div>
+      <div style={{ height: 3, background: "oklch(0.92 0.006 80)", borderRadius: 99, overflow: "hidden" }}>
         <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 99, transition: "width 0.4s ease" }} />
       </div>
     </div>
@@ -625,17 +625,17 @@ function NutritionSection({ data, setData }) {
       <p style={labelStyle}>Daily Goals</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 20 }}>
         <div>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Calories</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Calories</div>
           <input type="number" value={data.calGoal || ""} onChange={e => setData({ ...data, calGoal: e.target.value })}
             placeholder={String(DEFAULT_CAL)} style={{ ...textareaStyle, padding: "8px 10px", fontSize: 13 }} />
         </div>
         <div>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Protein g</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Protein g</div>
           <input type="number" value={data.protGoal || ""} onChange={e => setData({ ...data, protGoal: e.target.value })}
             placeholder={String(DEFAULT_PROT)} style={{ ...textareaStyle, padding: "8px 10px", fontSize: 13 }} />
         </div>
         <div>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Sugar g</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Sugar g</div>
           <input type="number" value={data.sugGoal || ""} onChange={e => setData({ ...data, sugGoal: e.target.value })}
             placeholder={String(DEFAULT_SUG)} style={{ ...textareaStyle, padding: "8px 10px", fontSize: 13 }} />
         </div>
@@ -645,7 +645,7 @@ function NutritionSection({ data, setData }) {
       <p style={labelStyle}>Meals today</p>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 6, marginBottom: 6 }}>
         {["Meal", "kcal", "prot g", "sugar g", ""].map((h, i) => (
-          <div key={i} style={{ color: "#334155", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", paddingLeft: 2 }}>{h}</div>
+          <div key={i} style={{ color: "oklch(0.72 0.01 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", paddingLeft: 2 }}>{h}</div>
         ))}
       </div>
       {meals.map((m, i) => (
@@ -660,7 +660,7 @@ function NutritionSection({ data, setData }) {
             placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
           <button onClick={() => removeMeal(i)} style={{
             width: 32, height: 38, borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)",
-            background: "rgba(239,68,68,0.06)", color: "#f87171", cursor: "pointer", fontSize: 15,
+            background: "rgba(239,68,68,0.06)", color: "oklch(0.58 0.15 25)", cursor: "pointer", fontSize: 15,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>×</button>
         </div>
@@ -848,7 +848,7 @@ function BreathingSection({ data, setData }) {
               {ex.phases.map((p, i) => (
                 <div key={i} style={{
                   padding: "4px 14px", borderRadius: 99, fontSize: 11,
-                  background: i === phase ? "rgba(255,255,255,0.12)" : "transparent",
+                  background: i === phase ? "oklch(0.86 0.01 80)" : "transparent",
                   color: i === phase ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)",
                   border: `1px solid ${i === phase ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.07)"}`,
                   fontFamily: "'DM Sans', sans-serif", transition: "all 0.4s",
@@ -861,7 +861,7 @@ function BreathingSection({ data, setData }) {
 
           <button onClick={stop} style={{
             position: "absolute", top: 52, right: 24,
-            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.07)", border: "1px solid oklch(0.86 0.01 80)",
             borderRadius: 99, padding: "8px 18px",
             color: "rgba(255,255,255,0.5)", fontSize: 13,
             fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
@@ -877,9 +877,9 @@ function BreathingSection({ data, setData }) {
             {[3, 5, 10, 15, 20].map(m => (
               <button key={m} onClick={() => setSessionMins(m)} style={{
                 padding: "8px 16px", borderRadius: 10,
-                background: sessionMins === m ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.04)",
-                border: sessionMins === m ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                color: sessionMins === m ? "#c4b5fd" : "#64748b",
+                background: sessionMins === m ? "oklch(0.6 0.1 65)" : "oklch(0.97 0.006 90)",
+                border: "1px solid " + (sessionMins === m ? "oklch(0.6 0.1 65)" : "oklch(0.86 0.01 80)"),
+                color: sessionMins === m ? "white" : "oklch(0.5 0.012 90)",
                 fontSize: 13, fontFamily: "'DM Mono', monospace", cursor: "pointer", transition: "all 0.2s",
               }}>
                 {m} min
@@ -892,12 +892,12 @@ function BreathingSection({ data, setData }) {
             {BREATHING_EXERCISES.map(e => (
               <button key={e.id} onClick={() => start(e.id)} style={{
                 padding: "16px 18px", borderRadius: 16, textAlign: "left",
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-                color: "#e2e8f0", cursor: "pointer", transition: "all 0.2s",
+                background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.88 0.008 80)",
+                color: "oklch(0.36 0.015 80)", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 10px 24px -18px rgba(70,60,40,0.2)",
               }}>
                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 15, marginBottom: 3 }}>{e.name}</div>
-                <div style={{ color: "#64748b", fontSize: 12, marginBottom: 4 }}>{e.desc}</div>
-                <div style={{ color: "#a78bfa", fontSize: 11 }}>Best for: {e.best}</div>
+                <div style={{ color: "oklch(0.54 0.012 90)", fontSize: 12, marginBottom: 4 }}>{e.desc}</div>
+                <div style={{ color: "oklch(0.6 0.1 65)", fontSize: 11 }}>Best for: {e.best}</div>
               </button>
             ))}
           </div>
@@ -920,8 +920,8 @@ function EveningSection({ data, setData }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
         {["😩 Rough", "😐 Meh", "🙂 Good", "😊 Great", "🌟 Amazing"].map(m => (
           <button key={m} onClick={() => setData({ ...data, dayRating: m })} style={{
-            ...moodBtn, background: data.dayRating === m ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.05)",
-            border: data.dayRating === m ? "1px solid #a78bfa" : "1px solid rgba(255,255,255,0.1)"
+            ...moodBtn, background: data.dayRating === m ? "oklch(0.6 0.1 65 / 0.2)" : "oklch(0.97 0.006 90)",
+            border: data.dayRating === m ? "1px solid #a78bfa" : "1px solid oklch(0.86 0.01 80)"
           }}>{m}</button>
         ))}
       </div>
@@ -930,8 +930,8 @@ function EveningSection({ data, setData }) {
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
         <input type="range" min={1} max={10} value={data.stress || 5}
           onChange={e => setData({ ...data, stress: e.target.value })}
-          style={{ flex: 1, accentColor: "#a78bfa" }} />
-        <span style={{ color: "#e2e8f0", fontFamily: "'DM Mono', monospace", fontSize: 18, minWidth: 24 }}>{data.stress || 5}</span>
+          style={{ flex: 1, accentColor: "oklch(0.6 0.1 65)" }} />
+        <span style={{ color: "oklch(0.36 0.015 80)", fontFamily: "'DM Mono', monospace", fontSize: 18, minWidth: 24 }}>{data.stress || 5}</span>
       </div>
 
       <p style={labelStyle}>💧 Water intake today</p>
@@ -946,27 +946,27 @@ function EveningSection({ data, setData }) {
               placeholder="e.g. 2.5"
               style={{ ...textareaStyle, padding: "12px 40px 12px 14px", fontSize: 20, fontFamily: "'DM Mono', monospace" }}
             />
-            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 12, pointerEvents: "none" }}>L</span>
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "oklch(0.58 0.012 90)", fontSize: 12, pointerEvents: "none" }}>L</span>
           </div>
         </div>
         {data.water && (() => {
           const w = parseFloat(data.water);
           const goal = 2.5;
           const pct = Math.min((w / goal) * 100, 100);
-          const color = w >= goal ? "#34d399" : w >= 1.8 ? "#a78bfa" : w >= 1.2 ? "#f59e0b" : "#f87171";
+          const color = w >= goal ? "oklch(0.53 0.09 165)" : w >= 1.8 ? "oklch(0.6 0.1 65)" : w >= 1.2 ? "oklch(0.62 0.12 65)" : "oklch(0.58 0.15 25)";
           const label = w >= goal ? "🎯 Goal reached!" : w >= 1.8 ? "💧 Almost there" : w >= 1.2 ? "💧 Keep drinking" : "⚠ Drink more";
           return (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ color: "#475569", fontSize: 11 }}>Daily goal: 2.5 L</span>
+                <span style={{ color: "oklch(0.58 0.012 90)", fontSize: 11 }}>Daily goal: 2.5 L</span>
                 <span style={{ color, fontSize: 12, fontWeight: 600 }}>{label}</span>
               </div>
-              <div style={{ height: 5, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ height: 5, background: "oklch(0.91 0.006 80)", borderRadius: 99, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 99, transition: "width 0.5s ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
                 {[0.5, 1.0, 1.5, 2.0, 2.5].map(mark => (
-                  <span key={mark} style={{ color: w >= mark ? color : "#334155", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>{mark}L</span>
+                  <span key={mark} style={{ color: w >= mark ? color : "oklch(0.72 0.01 90)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>{mark}L</span>
                 ))}
               </div>
             </div>
@@ -996,9 +996,9 @@ function EveningSection({ data, setData }) {
               setData({ ...data, activities: next });
             }} style={{
               padding: "9px 14px", borderRadius: 12,
-              background: isSelected ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.04)",
-              border: isSelected ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.08)",
-              color: isSelected ? "#c4b5fd" : "#64748b",
+              background: isSelected ? "oklch(0.6 0.1 65 / 0.15)" : "oklch(0.97 0.006 90)",
+              border: isSelected ? "1px solid oklch(0.6 0.1 65 / 0.5)" : "1px solid oklch(0.88 0.008 80)",
+              color: isSelected ? "oklch(0.55 0.1 65)" : "oklch(0.54 0.012 90)",
               cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif",
               display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s",
             }}>
@@ -1011,12 +1011,12 @@ function EveningSection({ data, setData }) {
       {/* Minutes per selected activity */}
       {(data.activities || []).filter(a => a !== "none").length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 11, marginBottom: 10 }}>Duration per activity</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11, marginBottom: 10 }}>Duration per activity</div>
           {(data.activities || []).filter(a => a !== "none").map(actId => {
             const labels = { yoga: "🧘 Yoga", run: "🏃 Run", tennis: "🎾 Tennis", ballet: "🩰 Ballet", other: "💪 Other" };
             return (
               <div key={actId} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <div style={{ color: "#94a3b8", fontSize: 13, width: 90 }}>{labels[actId]}</div>
+                <div style={{ color: "oklch(0.5 0.012 90)", fontSize: 13, width: 90 }}>{labels[actId]}</div>
                 <div style={{ position: "relative", flex: 1 }}>
                   <input
                     type="number"
@@ -1025,7 +1025,7 @@ function EveningSection({ data, setData }) {
                     placeholder="0"
                     style={{ ...textareaStyle, padding: "8px 40px 8px 12px", fontSize: 15, fontFamily: "'DM Mono', monospace" }}
                   />
-                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 11, pointerEvents: "none" }}>min</span>
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "oklch(0.58 0.012 90)", fontSize: 11, pointerEvents: "none" }}>min</span>
                 </div>
               </div>
             );
@@ -1033,7 +1033,7 @@ function EveningSection({ data, setData }) {
           {(() => {
             const total = Object.values(data.activityMins || {}).reduce((s, v) => s + (parseInt(v) || 0), 0);
             return total > 0 ? (
-              <div style={{ color: "#a78bfa", fontSize: 12, marginTop: 4 }}>
+              <div style={{ color: "oklch(0.6 0.1 65)", fontSize: 12, marginTop: 4 }}>
                 Total: {total} min · {Math.round(total / 60 * 10) / 10}h
               </div>
             ) : null;
@@ -1051,27 +1051,27 @@ function EveningSection({ data, setData }) {
             placeholder="Enter your steps..."
             style={{ ...textareaStyle, padding: "12px 52px 12px 14px", fontSize: 20, fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}
           />
-          <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "#475569", fontSize: 11, pointerEvents: "none" }}>steps</span>
+          <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "oklch(0.58 0.012 90)", fontSize: 11, pointerEvents: "none" }}>steps</span>
         </div>
         {data.steps && (() => {
           const s = parseInt(data.steps);
           const goal = 10000;
           const pct = Math.min((s / goal) * 100, 100);
-          const color = s >= goal ? "#34d399" : s >= 7500 ? "#a78bfa" : s >= 5000 ? "#f59e0b" : "#f87171";
+          const color = s >= goal ? "oklch(0.53 0.09 165)" : s >= 7500 ? "oklch(0.6 0.1 65)" : s >= 5000 ? "oklch(0.62 0.12 65)" : "oklch(0.58 0.15 25)";
           const label = s >= goal ? "Goal reached!" : s >= 7500 ? "Almost there" : s >= 5000 ? "Good progress" : "Keep moving";
           const emoji = s >= goal ? "🎯" : s >= 7500 ? "💪" : s >= 5000 ? "🚶" : "👟";
           return (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ color: "#475569", fontSize: 11 }}>Daily goal: 10,000</span>
+                <span style={{ color: "oklch(0.58 0.012 90)", fontSize: 11 }}>Daily goal: 10,000</span>
                 <span style={{ color, fontSize: 12, fontWeight: 600 }}>{emoji} {label}</span>
               </div>
-              <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ height: 6, background: "oklch(0.91 0.006 80)", borderRadius: 99, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: pct + "%", background: color, borderRadius: 99, transition: "width 0.5s ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                 {[2500, 5000, 7500, 10000].map(mark => (
-                  <span key={mark} style={{ color: s >= mark ? color : "#334155", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
+                  <span key={mark} style={{ color: s >= mark ? color : "oklch(0.72 0.01 90)", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
                     {mark >= 1000 ? (mark / 1000) + "k" : mark}
                   </span>
                 ))}
@@ -1234,45 +1234,45 @@ function ReportsSection() {
 
   // Color helpers
   const scoreColor = (val, good, bad, reverse=false) => {
-    if (!val) return "#475569";
-    if (reverse) { if (val <= good) return "#34d399"; if (val <= bad) return "#f59e0b"; return "#f87171"; }
-    if (val >= good) return "#34d399"; if (val >= bad) return "#f59e0b"; return "#f87171";
+    if (!val) return "oklch(0.58 0.012 90)";
+    if (reverse) { if (val <= good) return "oklch(0.53 0.09 165)"; if (val <= bad) return "oklch(0.62 0.12 65)"; return "oklch(0.58 0.15 25)"; }
+    if (val >= good) return "oklch(0.53 0.09 165)"; if (val >= bad) return "oklch(0.62 0.12 65)"; return "oklch(0.58 0.15 25)";
   };
 
   const StatRow = ({ label, value, unit, color }) => (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-      <div style={{ color: "#94a3b8", fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
-      <div style={{ color: color || "#e2e8f0", fontSize: 15, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>
-        {value !== null && value !== undefined ? `${value}${unit || ""}` : <span style={{color:"#334155"}}>—</span>}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid oklch(0.92 0.005 80)" }}>
+      <div style={{ color: "oklch(0.5 0.012 90)", fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
+      <div style={{ color: color || "oklch(0.36 0.015 80)", fontSize: 15, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>
+        {value !== null && value !== undefined ? `${value}${unit || ""}` : <span style={{color:"oklch(0.72 0.01 90)"}}>—</span>}
       </div>
     </div>
   );
 
   const StatsPanel = ({ stats, label }) => {
-    if (!stats) return <div style={{ color: "#475569", fontSize: 13, padding: 16 }}>No data yet for this period.</div>;
+    if (!stats) return <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 13, padding: 16 }}>No data yet for this period.</div>;
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ color: "#64748b", fontSize: 12, letterSpacing: 1 }}>{stats.count} of {stats.total} days tracked</div>
-          <div style={{ height: 4, width: 120, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: (stats.count/stats.total*100)+"%", background: "#a78bfa", borderRadius: 99 }} />
+          <div style={{ color: "oklch(0.54 0.012 90)", fontSize: 12, letterSpacing: 1 }}>{stats.count} of {stats.total} days tracked</div>
+          <div style={{ height: 4, width: 120, background: "oklch(0.97 0.006 90)", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: (stats.count/stats.total*100)+"%", background: "oklch(0.6 0.1 65)", borderRadius: 99 }} />
           </div>
         </div>
         <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>😴 Sleep & Energy</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>😴 Sleep & Energy</div>
           <StatRow label="Avg sleep" value={stats.avgSleep} unit="h" color={scoreColor(stats.avgSleep, 7.5, 6.5)} />
           <StatRow label="Avg energy" value={stats.avgEnergy || null} unit="/10" color={scoreColor(stats.avgEnergy, 7, 5)} />
           <StatRow label="Avg stress" value={stats.avgStress || null} unit="/10" color={scoreColor(stats.avgStress, 4, 6, true)} />
           <StatRow label="Avg mood" value={stats.avgMood || null} unit="/5" color={scoreColor(stats.avgMood, 4, 3)} />
         </div>
         <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>🥗 Nutrition</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>🥗 Nutrition</div>
           <StatRow label="Avg calories" value={stats.avgCal || null} unit=" kcal" color={scoreColor(stats.avgCal, 1700, 1400)} />
           <StatRow label="Avg protein" value={stats.avgProt || null} unit="g" color={scoreColor(stats.avgProt, 120, 90)} />
           <StatRow label="Avg sugar" value={stats.avgSugar || null} unit="g" color={scoreColor(stats.avgSugar, 15, 25, true)} />
         </div>
         <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>💊 Supplements & Habits</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>💊 Supplements & Habits</div>
           <StatRow label="Supplement adherence" value={stats.suppPct} unit="%" color={scoreColor(stats.suppPct, 80, 60)} />
           <StatRow label="Morning water" value={stats.waterPct} unit="%" color={scoreColor(stats.waterPct, 80, 50)} />
           <StatRow label="Avg steps" value={stats.avgSteps || null} unit="" color={scoreColor(stats.avgSteps, 8000, 5000)} />
@@ -1284,7 +1284,7 @@ function ReportsSection() {
   // Day detail view
   const DayDetail = ({ dateStr }) => {
     const d = allData[dateStr];
-    if (!d) return <div style={{ color: "#475569", padding: 16, fontSize: 13 }}>No data recorded for this day.</div>;
+    if (!d) return <div style={{ color: "oklch(0.58 0.012 90)", padding: 16, fontSize: 13 }}>No data recorded for this day.</div>;
     const meals = d.nutrition?.meals || [];
     const totalCal = meals.reduce((s,m)=>s+(parseInt(m.calories)||0),0);
     const totalProt = meals.reduce((s,m)=>s+(parseInt(m.protein)||0),0);
@@ -1296,25 +1296,25 @@ function ReportsSection() {
     return (
       <div>
         <button onClick={() => { setSelectedDate(null); setView("weekly"); }} style={{ ...ghostBtn, fontSize: 12, marginBottom: 20 }}>← Back</button>
-        <h3 style={{ margin: "0 0 20px", color: "#f1f5f9", fontSize: 18, fontWeight: 600 }}>{formatDate(dateStr)}</h3>
+        <h3 style={{ margin: "0 0 20px", color: "oklch(0.33 0.02 80)", fontSize: 18, fontWeight: 600 }}>{formatDate(dateStr)}</h3>
 
         {d.morning && <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🌅 Morning</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🌅 Morning</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {d.morning.mood && <span style={pill}>{d.morning.mood}</span>}
             {d.morning.hours && <span style={pill}>😴 {d.morning.hours}h sleep</span>}
             {d.morning.sleep && <span style={pill}>Sleep: {d.morning.sleep}</span>}
             {d.morning.energy && <span style={pill}>⚡ Energy {d.morning.energy}/10</span>}
-            {d.morning.water && <span style={{ ...pill, background: "rgba(52,211,153,0.15)", color: "#34d399" }}>🍋 Morning water ✓</span>}
+            {d.morning.water && <span style={{ ...pill, background: "oklch(0.53 0.09 165 / 0.12)", color: "oklch(0.53 0.09 165)" }}>🍋 Morning water ✓</span>}
           </div>
-          {d.morning.tasks && <div style={{ color: "#64748b", fontSize: 13, marginTop: 10, fontStyle: "italic" }}>"{d.morning.tasks}"</div>}
+          {d.morning.tasks && <div style={{ color: "oklch(0.54 0.012 90)", fontSize: 13, marginTop: 10, fontStyle: "italic" }}>"{d.morning.tasks}"</div>}
         </div>}
 
         {allSupps.length > 0 && <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>💊 Supplements ({taken.length}/{allSupps.length})</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>💊 Supplements ({taken.length}/{allSupps.length})</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {allSupps.map(s => (
-              <span key={s.id} style={{ ...pill, background: taken.includes(s.id) ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.04)", color: taken.includes(s.id) ? "#34d399" : "#334155", textDecoration: taken.includes(s.id) ? "none" : "line-through" }}>
+              <span key={s.id} style={{ ...pill, background: taken.includes(s.id) ? "oklch(0.53 0.09 165 / 0.1)" : "oklch(0.995 0.004 90)", color: taken.includes(s.id) ? "oklch(0.53 0.09 165)" : "oklch(0.72 0.01 90)", textDecoration: taken.includes(s.id) ? "none" : "line-through" }}>
                 {taken.includes(s.id) ? "✓" : "○"} {s.name}
               </span>
             ))}
@@ -1322,22 +1322,22 @@ function ReportsSection() {
         </div>}
 
         {meals.length > 0 && <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🥗 Nutrition</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🥗 Nutrition</div>
           <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-            <div style={miniStat}><div style={{ color: "#f59e0b", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalCal}</div><div style={{ color: "#475569", fontSize: 10 }}>kcal</div></div>
-            <div style={miniStat}><div style={{ color: "#34d399", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalProt}g</div><div style={{ color: "#475569", fontSize: 10 }}>protein</div></div>
-            <div style={miniStat}><div style={{ color: totalSugar > 25 ? "#f87171" : "#a78bfa", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalSugar}g</div><div style={{ color: "#475569", fontSize: 10 }}>sugar</div></div>
+            <div style={miniStat}><div style={{ color: "oklch(0.62 0.12 65)", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalCal}</div><div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10 }}>kcal</div></div>
+            <div style={miniStat}><div style={{ color: "oklch(0.53 0.09 165)", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalProt}g</div><div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10 }}>protein</div></div>
+            <div style={miniStat}><div style={{ color: totalSugar > 25 ? "oklch(0.58 0.15 25)" : "oklch(0.6 0.1 65)", fontSize: 20, fontFamily: "'DM Mono', monospace" }}>{totalSugar}g</div><div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10 }}>sugar</div></div>
           </div>
           {meals.filter(m=>m.name).map((m,i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: 13 }}>
-              <span style={{ color: "#94a3b8" }}>{m.name}</span>
-              <span style={{ color: "#475569", fontFamily: "'DM Mono', monospace", fontSize: 12 }}>{m.calories||0}kcal · {m.protein||0}g · {m.sugar||0}g</span>
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid oklch(0.93 0.005 80)", fontSize: 13 }}>
+              <span style={{ color: "oklch(0.5 0.012 90)" }}>{m.name}</span>
+              <span style={{ color: "oklch(0.58 0.012 90)", fontFamily: "'DM Mono', monospace", fontSize: 12 }}>{m.calories||0}kcal · {m.protein||0}g · {m.sugar||0}g</span>
             </div>
           ))}
         </div>}
 
         {d.evening && <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🌙 Evening</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>🌙 Evening</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {d.evening.dayRating && <span style={pill}>{d.evening.dayRating}</span>}
             {d.evening.stress && <span style={pill}>Stress {d.evening.stress}/10</span>}
@@ -1348,18 +1348,18 @@ function ReportsSection() {
         </div>}
 
         {d.reflection && (d.reflection.gratitude || d.reflection.wins) && <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>✨ Reflection</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>✨ Reflection</div>
           {d.reflection.gratitude?.filter(Boolean).map((g, i) => (
-            <div key={i} style={{ color: "#94a3b8", fontSize: 13, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>✦ {g}</div>
+            <div key={i} style={{ color: "oklch(0.5 0.012 90)", fontSize: 13, padding: "5px 0", borderBottom: "1px solid oklch(0.93 0.005 80)" }}>✦ {g}</div>
           ))}
-          {d.reflection.wins && <div style={{ color: "#64748b", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>"{d.reflection.wins}"</div>}
+          {d.reflection.wins && <div style={{ color: "oklch(0.54 0.012 90)", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>"{d.reflection.wins}"</div>}
         </div>}
       </div>
     );
   };
 
-  const pill = { padding: "4px 10px", borderRadius: 99, fontSize: 12, background: "rgba(255,255,255,0.06)", color: "#94a3b8", fontFamily: "'DM Sans', sans-serif" };
-  const miniStat = { flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px", textAlign: "center" };
+  const pill = { padding: "4px 10px", borderRadius: 99, fontSize: 12, background: "oklch(0.97 0.006 90)", color: "oklch(0.5 0.012 90)", fontFamily: "'DM Sans', sans-serif" };
+  const miniStat = { flex: 1, background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.91 0.006 80)", borderRadius: 12, padding: "10px", textAlign: "center" };
 
   // Calendar strip for day picker
   const CalendarStrip = ({ days }) => (
@@ -1373,15 +1373,15 @@ function ReportsSection() {
             <button key={date} onClick={() => { setSelectedDate(date); setView("day"); }} style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               padding: "8px 6px", borderRadius: 10, minWidth: 42,
-              background: isSelected ? "rgba(167,139,250,0.25)" : isToday ? "rgba(255,255,255,0.08)" : "transparent",
-              border: isSelected ? "1px solid #a78bfa" : isToday ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent",
+              background: isSelected ? "oklch(0.6 0.1 65 / 0.2)" : isToday ? "oklch(0.88 0.008 80)" : "transparent",
+              border: isSelected ? "1px solid #a78bfa" : isToday ? "1px solid oklch(0.84 0.01 80)" : "1px solid transparent",
               cursor: "pointer",
             }}>
-              <div style={{ color: "#475569", fontSize: 10 }}>{dayName(date)}</div>
-              <div style={{ color: isSelected ? "#c4b5fd" : isToday ? "#f1f5f9" : "#64748b", fontSize: 13, fontWeight: isToday ? 700 : 400, fontFamily: "'DM Mono', monospace" }}>
+              <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10 }}>{dayName(date)}</div>
+              <div style={{ color: isSelected ? "oklch(0.55 0.1 65)" : isToday ? "oklch(0.33 0.02 80)" : "oklch(0.54 0.012 90)", fontSize: 13, fontWeight: isToday ? 700 : 400, fontFamily: "'DM Mono', monospace" }}>
                 {new Date(date + "T12:00:00").getDate()}
               </div>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: hasData ? "#a78bfa" : "rgba(255,255,255,0.08)" }} />
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: hasData ? "oklch(0.6 0.1 65)" : "oklch(0.88 0.008 80)" }} />
             </button>
           );
         })}
@@ -1458,8 +1458,8 @@ function ReportsSection() {
     const getStatus = (item, daysTaken, startDate) => {
       const cycle = SUPPLEMENT_CYCLES[item.id];
       if (!cycle) return null;
-      if (cycle.courseDays === -1) return { type: "ongoing", color: "#34d399" };
-      if (!startDate) return { type: "nodate", color: "#475569" };
+      if (cycle.courseDays === -1) return { type: "ongoing", color: "oklch(0.53 0.09 165)" };
+      if (!startDate) return { type: "nodate", color: "oklch(0.58 0.012 90)" };
 
       if (daysTaken >= cycle.courseDays) {
         // On break — count break days elapsed since course ended
@@ -1473,7 +1473,7 @@ function ReportsSection() {
         const resumeStr = resumeDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
         return {
           type: "break",
-          color: "#f87171",
+          color: "oklch(0.58 0.15 25)",
           breakElapsed: Math.max(0, breakElapsed),
           breakTotal: cycle.breakDays,
           breakLeft,
@@ -1484,13 +1484,13 @@ function ReportsSection() {
 
       const daysLeft = cycle.courseDays - daysTaken;
       const progress = Math.min((daysTaken / cycle.courseDays) * 100, 100);
-      return { type: "active", color: "#a78bfa", daysLeft, progress };
+      return { type: "active", color: "oklch(0.6 0.1 65)", daysLeft, progress };
     };
 
     return (
       <div>
-        <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>💊 Supplement Tracker</div>
-        <div style={{ color: "#334155", fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>💊 Supplement Tracker</div>
+        <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 11, marginBottom: 16, lineHeight: 1.5 }}>
           Set a start date — every calendar day from that date counts as 1 day taken.
         </div>
         {uniqueItems.map(item => {
@@ -1502,22 +1502,22 @@ function ReportsSection() {
           return (
             <div key={item.id} style={{
               marginBottom: 14, padding: "14px 16px", borderRadius: 14,
-              background: status?.type === "break" ? "rgba(248,113,113,0.05)" : "rgba(255,255,255,0.03)",
-              border: `1px solid ${status?.type === "break" ? "rgba(248,113,113,0.25)" : "rgba(255,255,255,0.07)"}`,
+              background: status?.type === "break" ? "oklch(0.58 0.15 25 / 0.05)" : "oklch(0.995 0.004 90)",
+              border: `1px solid ${status?.type === "break" ? "oklch(0.58 0.15 25 / 0.25)" : "oklch(0.91 0.006 80)"}`,
             }}>
 
               {/* Name + days taken */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div style={{ flex: 1, paddingRight: 10 }}>
-                  <div style={{ color: status?.type === "break" ? "#f87171" : "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
-                  <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>{item.dose}</div>
+                  <div style={{ color: status?.type === "break" ? "oklch(0.58 0.15 25)" : "oklch(0.36 0.015 80)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
+                  <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11, marginTop: 2 }}>{item.dose}</div>
                 </div>
                 {startDate && (
                   <div style={{ textAlign: "center", flexShrink: 0 }}>
-                    <div style={{ color: status?.color || "#a78bfa", fontSize: 26, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>
+                    <div style={{ color: status?.color || "oklch(0.6 0.1 65)", fontSize: 26, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>
                       {status?.type === "break" ? status.breakElapsed : daysTaken}
                     </div>
-                    <div style={{ color: "#334155", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>
                       {status?.type === "break" ? `of ${status.breakTotal} break days` : cycle?.courseDays > 0 ? `of ${cycle.courseDays} days` : "days"}
                     </div>
                   </div>
@@ -1528,11 +1528,11 @@ function ReportsSection() {
               {startDate && status?.type === "active" && cycle?.courseDays > 0 && (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ color: "#334155", fontSize: 10 }}>Day 1</span>
-                    <span style={{ color: "#334155", fontSize: 10 }}>{status.daysLeft} days left</span>
-                    <span style={{ color: "#334155", fontSize: 10 }}>Day {cycle.courseDays}</span>
+                    <span style={{ color: "oklch(0.72 0.01 90)", fontSize: 10 }}>Day 1</span>
+                    <span style={{ color: "oklch(0.72 0.01 90)", fontSize: 10 }}>{status.daysLeft} days left</span>
+                    <span style={{ color: "oklch(0.72 0.01 90)", fontSize: 10 }}>Day {cycle.courseDays}</span>
                   </div>
-                  <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: 6, background: "oklch(0.97 0.006 90)", borderRadius: 99, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: status.progress + "%", background: "linear-gradient(90deg, #818cf8, #a78bfa)", borderRadius: 99, transition: "width 0.5s ease" }} />
                   </div>
                 </div>
@@ -1542,13 +1542,13 @@ function ReportsSection() {
               {status?.type === "break" && (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ color: "#f87171", fontSize: 11, fontWeight: 600 }}>⛔ On break — {status.breakLeft} days until resume</span>
+                    <span style={{ color: "oklch(0.58 0.15 25)", fontSize: 11, fontWeight: 600 }}>⛔ On break — {status.breakLeft} days until resume</span>
                   </div>
-                  <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
+                  <div style={{ height: 6, background: "oklch(0.97 0.006 90)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
                     <div style={{ height: "100%", width: status.breakPct + "%", background: "linear-gradient(90deg, #f87171, #fbbf24)", borderRadius: 99, transition: "width 0.5s ease" }} />
                   </div>
-                  <div style={{ color: "#475569", fontSize: 11 }}>
-                    Resume on <span style={{ color: "#fbbf24" }}>{status.resumeDate}</span>
+                  <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11 }}>
+                    Resume on <span style={{ color: "oklch(0.62 0.12 75)" }}>{status.resumeDate}</span>
                   </div>
                 </div>
               )}
@@ -1556,18 +1556,18 @@ function ReportsSection() {
               {/* Ongoing badge */}
               {status?.type === "ongoing" && (
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 11, background: "rgba(52,211,153,0.15)", color: "#34d399" }}>✓ Ongoing — no break needed</span>
+                  <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 11, background: "oklch(0.53 0.09 165 / 0.12)", color: "oklch(0.53 0.09 165)" }}>✓ Ongoing — no break needed</span>
                 </div>
               )}
 
               {/* No date set */}
               {status?.type === "nodate" && (
-                <div style={{ color: "#334155", fontSize: 11, marginBottom: 6 }}>Set start date to begin tracking</div>
+                <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 11, marginBottom: 6 }}>Set start date to begin tracking</div>
               )}
 
               {/* Clinical note */}
               {cycle && cycle.notes && (
-                <div style={{ color: "#334155", fontSize: 11, marginBottom: 8, lineHeight: 1.5 }}>{cycle.notes}</div>
+                <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 11, marginBottom: 8, lineHeight: 1.5 }}>{cycle.notes}</div>
               )}
 
               {/* Start date picker */}
@@ -1575,12 +1575,12 @@ function ReportsSection() {
                 {editingId === item.id ? (
                   <>
                     <input type="date" value={dateInput} onChange={e => setDateInput(e.target.value)}
-                      style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"6px 10px", color:"#e2e8f0", fontSize:12, outline:"none" }} />
-                    <button onClick={() => setStartDate(item.id, dateInput)} style={{ padding:"5px 14px", borderRadius:8, background:"rgba(167,139,250,0.2)", border:"1px solid rgba(167,139,250,0.3)", color:"#c4b5fd", fontSize:12, cursor:"pointer" }}>Save</button>
-                    <button onClick={() => setEditingId(null)} style={{ padding:"5px 10px", borderRadius:8, background:"transparent", border:"1px solid rgba(255,255,255,0.08)", color:"#475569", fontSize:12, cursor:"pointer" }}>Cancel</button>
+                      style={{ background:"oklch(0.97 0.006 90)", border:"1px solid oklch(0.86 0.01 80)", borderRadius:8, padding:"6px 10px", color:"oklch(0.36 0.015 80)", fontSize:12, outline:"none" }} />
+                    <button onClick={() => setStartDate(item.id, dateInput)} style={{ padding:"5px 14px", borderRadius:8, background:"oklch(0.6 0.1 65 / 0.15)", border:"1px solid oklch(0.6 0.1 65 / 0.3)", color:"oklch(0.55 0.1 65)", fontSize:12, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => setEditingId(null)} style={{ padding:"5px 10px", borderRadius:8, background:"transparent", border:"1px solid oklch(0.88 0.008 80)", color:"oklch(0.58 0.012 90)", fontSize:12, cursor:"pointer" }}>Cancel</button>
                   </>
                 ) : (
-                  <button onClick={() => { setEditingId(item.id); setDateInput(startDate || today); }} style={{ padding:"4px 12px", borderRadius:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color: startDate ? "#64748b" : "#a78bfa", fontSize:11, cursor:"pointer", fontFamily:"'DM Sans', sans-serif" }}>
+                  <button onClick={() => { setEditingId(item.id); setDateInput(startDate || today); }} style={{ padding:"4px 12px", borderRadius:8, background:"oklch(0.995 0.004 90)", border:"1px solid oklch(0.88 0.008 80)", color: startDate ? "oklch(0.54 0.012 90)" : "oklch(0.6 0.1 65)", fontSize:11, cursor:"pointer", fontFamily:"'DM Sans', sans-serif" }}>
                     {startDate ? `📅 Started ${formatDate(startDate)}` : "📅 Set start date →"}
                   </button>
                 )}
@@ -1608,9 +1608,9 @@ function ReportsSection() {
         {[["weekly","7 Days"],["monthly","30 Days"],["annual","12 Months"],["supplements","Supplements"]].map(([v, label]) => (
           <button key={v} onClick={() => setView(v)} style={{
             padding: "8px 16px", borderRadius: 99, fontSize: 13,
-            background: view === v ? "rgba(167,139,250,0.2)" : "transparent",
-            border: view === v ? "1px solid rgba(167,139,250,0.5)" : "1px solid rgba(255,255,255,0.07)",
-            color: view === v ? "#c4b5fd" : "#64748b", cursor: "pointer",
+            background: view === v ? "oklch(0.6 0.1 65 / 0.15)" : "transparent",
+            border: view === v ? "1px solid oklch(0.6 0.1 65 / 0.5)" : "1px solid oklch(0.91 0.006 80)",
+            color: view === v ? "oklch(0.55 0.1 65)" : "oklch(0.54 0.012 90)", cursor: "pointer",
             fontFamily: "'DM Sans', sans-serif",
           }}>{label}</button>
         ))}
@@ -1621,7 +1621,7 @@ function ReportsSection() {
       {view !== "supplements" && view === "monthly" && <CalendarStrip days={monthDays} />}
       {view !== "supplements" && view === "annual"  && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ color: "#475569", fontSize: 11, marginBottom: 10 }}>Tap a month to explore days</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11, marginBottom: 10 }}>Tap a month to explore days</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
             {Array.from({length: 12}, (_,i) => {
               const d = new Date(); d.setMonth(d.getMonth() - 11 + i);
@@ -1631,9 +1631,9 @@ function ReportsSection() {
               return (
                 <div key={i} style={{ ...statCard, padding: 10, textAlign: "center", cursor: "pointer" }}
                   onClick={() => setView("monthly")}>
-                  <div style={{ color: "#64748b", fontSize: 11 }}>{d.toLocaleDateString("en-GB",{month:"short"})}</div>
-                  <div style={{ color: tracked > 0 ? "#a78bfa" : "#334155", fontSize: 18, fontFamily: "'DM Mono', monospace", margin: "4px 0" }}>{tracked}</div>
-                  <div style={{ color: "#334155", fontSize: 10 }}>days</div>
+                  <div style={{ color: "oklch(0.54 0.012 90)", fontSize: 11 }}>{d.toLocaleDateString("en-GB",{month:"short"})}</div>
+                  <div style={{ color: tracked > 0 ? "oklch(0.6 0.1 65)" : "oklch(0.72 0.01 90)", fontSize: 18, fontFamily: "'DM Mono', monospace", margin: "4px 0" }}>{tracked}</div>
+                  <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 10 }}>days</div>
                 </div>
               );
             })}
@@ -1649,7 +1649,7 @@ function ReportsSection() {
       {/* Recent days list */}
       {view !== "supplements" && view !== "annual" && dates.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <div style={{ color: "#475569", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Recent Days</div>
+          <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Recent Days</div>
           {dates.slice(0, view === "weekly" ? 7 : 30).map(date => {
             const d = allData[date];
             const meals = d.nutrition?.meals || [];
@@ -1658,27 +1658,27 @@ function ReportsSection() {
             return (
               <button key={date} onClick={() => { setSelectedDate(date); setView("day"); }} style={{
                 width: "100%", padding: "12px 14px", borderRadius: 12, marginBottom: 8,
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.91 0.006 80)",
                 cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center",
               }}>
                 <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+                  <div style={{ color: "oklch(0.36 0.015 80)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
                     {date === today ? "Today" : formatDate(date)}
                   </div>
-                  <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
+                  <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11, marginTop: 2 }}>
                     {d.morning?.mood || ""} {d.morning?.hours ? d.morning.hours + "h sleep" : ""}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                   {cal > 0 && <div style={{ textAlign: "right" }}>
-                    <div style={{ color: "#f59e0b", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{cal}</div>
-                    <div style={{ color: "#334155", fontSize: 10 }}>kcal</div>
+                    <div style={{ color: "oklch(0.62 0.12 65)", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{cal}</div>
+                    <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 10 }}>kcal</div>
                   </div>}
                   {steps > 0 && <div style={{ textAlign: "right" }}>
-                    <div style={{ color: "#60a5fa", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{steps.toLocaleString()}</div>
-                    <div style={{ color: "#334155", fontSize: 10 }}>steps</div>
+                    <div style={{ color: "oklch(0.55 0.1 230)", fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{steps.toLocaleString()}</div>
+                    <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 10 }}>steps</div>
                   </div>}
-                  <div style={{ color: "#334155", fontSize: 16 }}>›</div>
+                  <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 16 }}>›</div>
                 </div>
               </button>
             );
@@ -1689,7 +1689,7 @@ function ReportsSection() {
       {view === "supplements" && <SupplementTracker />}
 
       {view !== "supplements" && dates.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#334155" }}>
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "oklch(0.72 0.01 90)" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
           <div style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>No history yet.</div>
           <div style={{ fontSize: 12, marginTop: 4 }}>Start tracking today and your data will appear here.</div>
@@ -1744,27 +1744,31 @@ export default function WellbeingCompanion() {
       <div style={{ position: "fixed", inset: 0, background: "radial-gradient(118% 78% at 50% -10%, oklch(0.88 0.05 70 / 0.55), transparent 58%)", animation: "glowpulse 9s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
 
       {/* Header */}
-      <div style={{ padding: "28px 24px 0", maxWidth: 600, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+      <div style={{ position: "relative", zIndex: 1, padding: "56px 24px 0", maxWidth: 600, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ color: "#475569", fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>{today}</div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#f1f5f9", letterSpacing: -0.5 }}>Daily Wellbeing</h1>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11.5, letterSpacing: 2, color: "oklch(0.6 0.1 65)", textTransform: "uppercase", marginBottom: 14 }}>{today}</div>
+            <h1 style={{ margin: 0, fontFamily: "'Newsreader', serif", fontSize: 38, fontWeight: 400, lineHeight: 1, color: "oklch(0.33 0.02 80)" }}>
+              {activeSection === "morning" ? "Good morning" : activeSection === "supplements" ? "Supplements" : activeSection === "nutrition" ? "Nutrition" : activeSection === "breathing" ? "Breathing" : activeSection === "evening" ? "Evening" : activeSection === "reflection" ? "Reflection" : "Progress"}
+            </h1>
+            <div style={{ fontFamily: "'Newsreader', serif", fontStyle: "italic", fontSize: 18, color: "oklch(0.52 0.015 90)", marginTop: 9 }}>
+              {activeSection === "morning" ? "Let's ease into the day." : activeSection === "supplements" ? "Your daily protocol." : activeSection === "nutrition" ? "Fuel your body well." : activeSection === "breathing" ? "Find your rhythm." : activeSection === "evening" ? "Wind down gently." : activeSection === "reflection" ? "A moment of stillness." : "Your journey so far."}
+            </div>
           </div>
-          <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <div style={{ fontSize: 28 }}>🌿</div>
-            <button onClick={() => setShowKeyInput(v => !v)} style={{ fontSize: 10, background: apiKey ? "rgba(52,211,153,0.15)" : "rgba(239,68,68,0.15)", border: "1px solid " + (apiKey ? "rgba(52,211,153,0.3)" : "rgba(239,68,68,0.3)"), borderRadius: 6, padding: "2px 8px", color: apiKey ? "#34d399" : "#f87171", cursor: "pointer" }}>
-              {apiKey ? "✓ AI ready" : "⚠ Set API key"}
+          <div style={{ paddingTop: 4 }}>
+            <button onClick={() => setShowKeyInput(v => !v)} style={{ fontSize: 10, background: apiKey ? "oklch(0.53 0.09 165 / 0.12)" : "oklch(0.6 0.15 25 / 0.12)", border: "1px solid " + (apiKey ? "oklch(0.53 0.09 165 / 0.4)" : "oklch(0.6 0.15 25 / 0.4)"), borderRadius: 999, padding: "4px 10px", color: apiKey ? "oklch(0.45 0.09 165)" : "oklch(0.5 0.15 25)", cursor: "pointer", fontFamily: "'DM Mono', monospace", letterSpacing: 0.5 }}>
+              {apiKey ? "✓ AI" : "⚠ Key"}
             </button>
           </div>
         </div>
         {showKeyInput && (
-          <div style={{ marginBottom: 16, padding: 14, background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ color: "#94a3b8", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Anthropic API Key</div>
+          <div style={{ marginTop: 14, marginBottom: 4, padding: 16, background: "oklch(0.995 0.004 90)", borderRadius: 20, border: "1px solid oklch(0.88 0.008 80)", boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)" }}>
+            <div style={{ color: "oklch(0.56 0.012 90)", fontSize: 11, fontFamily: "'DM Mono', monospace", letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10 }}>Anthropic API Key</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <input type="password" value={apiKey} onChange={e => saveApiKey(e.target.value)} placeholder="sk-ant-..." style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 12px", color: "#e2e8f0", fontSize: 13, outline: "none" }} />
-              <button onClick={() => setShowKeyInput(false)} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer" }}>Save</button>
+              <input type="password" value={apiKey} onChange={e => saveApiKey(e.target.value)} placeholder="sk-ant-..." style={{ flex: 1, background: "oklch(0.97 0.006 90)", border: "1px solid oklch(0.86 0.01 80)", borderRadius: 12, padding: "8px 12px", color: "oklch(0.34 0.018 80)", fontSize: 13, outline: "none" }} />
+              <button onClick={() => setShowKeyInput(false)} style={{ background: "oklch(0.6 0.1 65)", border: "none", borderRadius: 999, padding: "8px 18px", color: "white", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>Save</button>
             </div>
-            <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>Get your key at console.anthropic.com · Stored only on your device</div>
+            <div style={{ color: "oklch(0.62 0.01 90)", fontSize: 11, marginTop: 8 }}>console.anthropic.com · Stored only on your device</div>
           </div>
         )}
 
