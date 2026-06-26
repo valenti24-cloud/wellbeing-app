@@ -569,15 +569,73 @@ function SupplementsSection({ data, setData }) {
 }
 
 function NutritionSection({ data, setData }) {
+  const apiKey = React.useContext(ApiKeyContext);
   // Defaults tuned for woman, 45yo, office worker, training 4-5x/week
-  // Calories: 1900 kcal maintenance with active lifestyle
-  // Protein: 130g (high for muscle preservation & hormonal health)
-  // Sugar: 25g (WHO max for women)
   const DEFAULT_CAL  = 1900;
   const DEFAULT_PROT = 130;
   const DEFAULT_SUG  = 25;
 
+  // Photo analysis state
+  const [analyzing, setAnalyzing] = React.useState(false);
+  const [draft, setDraft] = React.useState(null); // { name, calories, protein, sugar } pending approval
+  const [photoError, setPhotoError] = React.useState("");
+  const fileInputRef = React.useRef(null);
+
   const meals = data.meals || [{ name: "", calories: "", protein: "", sugar: "" }];
+
+  const analyzePhoto = async (file) => {
+    if (!apiKey) { setPhotoError("Set your API key first (top right)."); return; }
+    setPhotoError("");
+    setAnalyzing(true);
+    setDraft(null);
+    try {
+      // Convert image to base64
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(",")[1]);
+        r.onerror = () => rej(new Error("Could not read image"));
+        r.readAsDataURL(file);
+      });
+      const mediaType = file.type || "image/jpeg";
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-5",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: "Analyze this meal photo. Estimate the nutritional content for the full portion shown. Respond ONLY with a JSON object, no markdown, no other text, in exactly this format: {\"name\": \"short dish name (max 5 words)\", \"calories\": number, \"protein\": number, \"sugar\": number}. Calories in kcal, protein and sugar in grams, all as integers. Be realistic with portion sizes." }
+            ]
+          }]
+        })
+      });
+      const dataResp = await response.json();
+      if (dataResp.error) { setPhotoError("API: " + dataResp.error.message); setAnalyzing(false); return; }
+      let text = (dataResp.content || []).map(c => c.text || "").join("").trim();
+      text = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(text);
+      setDraft({
+        name: parsed.name || "Meal",
+        calories: String(parsed.calories || 0),
+        protein: String(parsed.protein || 0),
+        sugar: String(parsed.sugar || 0),
+      });
+    } catch (err) {
+      setPhotoError("Could not analyze photo. Try again or add manually.");
+    }
+    setAnalyzing(false);
+  };
+
+  const approveDraft = () => {
+    // Save ONLY the 3 figures + description. Photo already discarded (never stored).
+    const cleanMeals = meals.filter(m => m.name || m.calories || m.protein || m.sugar);
+    setData({ ...data, meals: [...cleanMeals, { name: draft.name, calories: draft.calories, protein: draft.protein, sugar: draft.sugar }] });
+    setDraft(null);
+  };
 
   const updateMeal = (i, field, val) => {
     const m = [...meals]; m[i] = { ...m[i], [field]: val }; setData({ ...data, meals: m });
@@ -641,7 +699,64 @@ function NutritionSection({ data, setData }) {
         </div>
       </div>
 
-      {/* Meal log — now 4 columns: name | kcal | protein | sugar */}
+      {/* AI Photo analysis */}
+      <p style={labelStyle}>Add meal from photo</p>
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) analyzePhoto(f); e.target.value = ""; }} />
+
+      {!draft && (
+        <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} style={{
+          width: "100%", padding: "16px", borderRadius: 18, marginBottom: 16,
+          background: analyzing ? "oklch(0.95 0.006 90)" : "oklch(0.6 0.1 65 / 0.08)",
+          border: "1px dashed " + (analyzing ? "oklch(0.8 0.01 80)" : "oklch(0.6 0.1 65 / 0.5)"),
+          color: analyzing ? "oklch(0.55 0.012 90)" : "oklch(0.5 0.1 65)",
+          cursor: analyzing ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        }}>
+          {analyzing ? "✦ Analyzing photo..." : "📷 Take or upload a meal photo"}
+        </button>
+      )}
+
+      {photoError && <div style={{ color: "oklch(0.58 0.15 25)", fontSize: 12, marginBottom: 14, padding: "8px 12px", background: "oklch(0.58 0.15 25 / 0.08)", borderRadius: 10 }}>{photoError}</div>}
+
+      {/* Draft review card */}
+      {draft && (
+        <div style={{ marginBottom: 16, padding: 18, background: "oklch(0.995 0.004 90)", border: "1px solid oklch(0.6 0.1 65 / 0.35)", borderRadius: 20, boxShadow: "0 1px 2px rgba(70,60,40,0.04), 0 14px 30px -22px rgba(70,60,40,0.25)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 16 }}>✦</span>
+            <span style={{ fontFamily: "'Newsreader', serif", fontSize: 17, color: "oklch(0.36 0.015 80)" }}>Review estimate</span>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 5 }}>Description</div>
+            <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
+              style={{ ...textareaStyle, padding: "10px 12px", fontSize: 14, fontFamily: "'Newsreader', serif" }} />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+            <div>
+              <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>kcal</div>
+              <input type="number" value={draft.calories} onChange={e => setDraft({ ...draft, calories: e.target.value })} style={{ ...textareaStyle, padding: "10px", fontSize: 16, fontFamily: "'DM Mono', monospace", textAlign: "center" }} />
+            </div>
+            <div>
+              <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>protein g</div>
+              <input type="number" value={draft.protein} onChange={e => setDraft({ ...draft, protein: e.target.value })} style={{ ...textareaStyle, padding: "10px", fontSize: 16, fontFamily: "'DM Mono', monospace", textAlign: "center" }} />
+            </div>
+            <div>
+              <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>sugar g</div>
+              <input type="number" value={draft.sugar} onChange={e => setDraft({ ...draft, sugar: e.target.value })} style={{ ...textareaStyle, padding: "10px", fontSize: 16, fontFamily: "'DM Mono', monospace", textAlign: "center" }} />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setDraft(null)} style={{ ...ghostBtn, flex: 1, textAlign: "center", justifyContent: "center" }}>Discard</button>
+            <button onClick={approveDraft} style={{ flex: 2, padding: "10px", borderRadius: 999, background: "oklch(0.6 0.1 65)", border: "none", color: "white", fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>✓ Approve & save</button>
+          </div>
+          <div style={{ color: "oklch(0.66 0.01 90)", fontSize: 11, marginTop: 10, textAlign: "center" }}>Only these numbers are saved — the photo is never stored.</div>
+        </div>
+      )}
+
+      {/* Meal log */}
       <p style={labelStyle}>Meals today</p>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 6, marginBottom: 6 }}>
         {["Meal", "kcal", "prot g", "sugar g", ""].map((h, i) => (
