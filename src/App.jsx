@@ -1728,9 +1728,9 @@ export default function WellbeingCompanion() {
   return (
     <ApiKeyContext.Provider value={apiKey}>
     <div style={{
-      minHeight: "100vh", background: "#f4efe6",
+      minHeight: "100vh", width: "100%", background: "#f4efe6",
       fontFamily: "'DM Sans', system-ui, sans-serif", color: "oklch(0.34 0.018 90)",
-      position: "relative",
+      position: "relative", overflowX: "hidden",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
