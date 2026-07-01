@@ -368,10 +368,14 @@ function SupplementsSection({ data, setData }) {
 
   const taken = data.taken || [];
 
-  // Check if a supplement is currently on break based on start date meta
+  const [metaVersion, setMetaVersion] = React.useState(0);
+
+  // Check if a supplement is currently on break (manual OR course-complete)
   const isOnBreak = (itemId) => {
     try {
       const meta = JSON.parse(localStorage.getItem("wb_supp_meta") || "{}");
+      // Manual voluntary break
+      if (meta[itemId]?.manualBreak) return true;
       const startDate = meta[itemId]?.startDate;
       if (!startDate) return false;
       const cycle = SUPPLEMENT_CYCLES[itemId];
@@ -379,6 +383,27 @@ function SupplementsSection({ data, setData }) {
       const daysTaken = Math.max(0, Math.floor((new Date() - new Date(startDate + "T12:00:00")) / (1000 * 60 * 60 * 24)));
       return daysTaken >= cycle.courseDays;
     } catch(e) { return false; }
+  };
+
+  // Start / end a voluntary break for a supplement
+  const toggleManualBreak = (itemId) => {
+    try {
+      const meta = JSON.parse(localStorage.getItem("wb_supp_meta") || "{}");
+      const cur = meta[itemId] || {};
+      if (cur.manualBreak) {
+        // Ending break — clear the break, restart the course from today
+        delete cur.manualBreak;
+        delete cur.manualBreakStart;
+        cur.startDate = new Date().toISOString().split("T")[0];
+      } else {
+        // Starting break
+        cur.manualBreak = true;
+        cur.manualBreakStart = new Date().toISOString().split("T")[0];
+      }
+      meta[itemId] = cur;
+      localStorage.setItem("wb_supp_meta", JSON.stringify(meta));
+      setMetaVersion(v => v + 1);
+    } catch(e) {}
   };
 
   const toggle = (id) => {
@@ -524,34 +549,48 @@ function SupplementsSection({ data, setData }) {
               {group.items.map((item, idx) => {
                 const isTaken = taken.includes(item.id);
                 const onBreak = isOnBreak(item.id);
+                const canBreak = SUPPLEMENT_CYCLES[item.id] && SUPPLEMENT_CYCLES[item.id].courseDays !== -1;
                 return (
-                  <button key={item.id} onClick={() => toggle(item.id)} style={{
-                    width: "100%", padding: "13px 20px", textAlign: "left",
+                  <div key={item.id} style={{
+                    padding: "13px 20px",
                     background: onBreak ? "oklch(0.6 0.15 25 / 0.05)" : isTaken ? "oklch(0.6 0.1 65 / 0.07)" : "transparent",
-                    border: "none",
                     borderBottom: idx < group.items.length - 1 ? "1px solid oklch(0.92 0.005 80)" : "none",
-                    cursor: onBreak ? "not-allowed" : "pointer", transition: "background 0.15s",
-                    display: "flex", alignItems: "center", gap: 14, opacity: onBreak ? 0.65 : 1,
+                    display: "flex", alignItems: "center", gap: 14, opacity: onBreak ? 0.75 : 1,
                   }}>
-                    <div style={{
+                    {/* Checkbox — tap to mark taken */}
+                    <div onClick={() => toggle(item.id)} style={{
                       width: 22, height: 22, borderRadius: 7, flexShrink: 0,
                       background: onBreak ? "oklch(0.6 0.15 25 / 0.15)" : isTaken ? "oklch(0.6 0.1 65)" : "oklch(0.93 0.006 80)",
                       border: "1.5px solid " + (onBreak ? "oklch(0.6 0.15 25 / 0.5)" : isTaken ? "oklch(0.6 0.1 65)" : "oklch(0.82 0.01 80)"),
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 12, color: "white", fontWeight: 700, transition: "all 0.2s",
+                      cursor: onBreak ? "not-allowed" : "pointer",
                     }}>
                       {onBreak ? <span style={{ color: "oklch(0.5 0.15 25)", fontSize: 13 }}>✕</span> : isTaken ? "✓" : ""}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    {/* Name + dose */}
+                    <div onClick={() => toggle(item.id)} style={{ flex: 1, cursor: onBreak ? "not-allowed" : "pointer" }}>
                       <div style={{ fontSize: 13.5, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3, color: onBreak ? "oklch(0.5 0.12 25)" : "oklch(0.36 0.015 80)" }}>
                         {item.name}
                       </div>
                       <div style={{ fontSize: 11, marginTop: 2, fontFamily: "'DM Mono', monospace", color: onBreak ? "oklch(0.58 0.1 25)" : isTaken ? "oklch(0.6 0.1 65)" : "oklch(0.6 0.01 90)" }}>
-                        {onBreak ? "⛔ On break — see Reports" : item.dose}
+                        {onBreak ? "⏸ On break — see Reports" : item.dose}
                       </div>
                     </div>
-                    {isTaken && !onBreak && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "oklch(0.6 0.1 65)", flexShrink: 0 }} />}
-                  </button>
+                    {/* Break toggle */}
+                    {canBreak && (
+                      <button onClick={() => toggleManualBreak(item.id)} style={{
+                        flexShrink: 0, padding: "5px 11px", borderRadius: 999, fontSize: 11,
+                        background: onBreak ? "oklch(0.6 0.1 65 / 0.12)" : "oklch(0.96 0.006 90)",
+                        border: "1px solid " + (onBreak ? "oklch(0.6 0.1 65 / 0.4)" : "oklch(0.88 0.008 80)"),
+                        color: onBreak ? "oklch(0.5 0.1 65)" : "oklch(0.58 0.012 90)",
+                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                        display: "flex", alignItems: "center", gap: 4,
+                      }}>
+                        {onBreak ? "▶ Resume" : "⏸ Break"}
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -862,8 +901,11 @@ function BreathingSection({ data, setData }) {
   const [sessionMins, setSessionMins] = useState(5);
   const [sessionLeft, setSessionLeft] = useState(5 * 60);
   const [sessionDone, setSessionDone] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [prepLeft, setPrepLeft] = useState(10);
   const timerRef = useRef(null);
   const sessionRef = useRef(null);
+  const prepRef = useRef(null);
   const animFrameRef = useRef(null);
   const phaseStartRef = useRef(null);
   const [scale, setScale] = useState(0.08);
@@ -874,12 +916,30 @@ function BreathingSection({ data, setData }) {
   const start = (id) => {
     clearInterval(timerRef.current);
     clearInterval(sessionRef.current);
+    clearInterval(prepRef.current);
     cancelAnimationFrame(animFrameRef.current);
-    const secs = sessionMins * 60;
     setActive(id); setPhase(0); setCount(0); setCycles(0); setScale(0.08);
-    setSessionLeft(secs); setSessionDone(false);
+    setSessionLeft(sessionMins * 60); setSessionDone(false);
+    // Begin 10-second preparation countdown
+    setPrepLeft(10);
+    setPreparing(true);
+    prepRef.current = setInterval(() => {
+      setPrepLeft(t => {
+        if (t <= 1) {
+          clearInterval(prepRef.current);
+          beginExercise();
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  const beginExercise = () => {
+    setPreparing(false);
+    setPhase(0); setCount(0); setScale(0.08);
     phaseStartRef.current = performance.now();
-    // Session countdown
+    // Session countdown starts now
     sessionRef.current = setInterval(() => {
       setSessionLeft(t => {
         if (t <= 1) {
@@ -895,8 +955,9 @@ function BreathingSection({ data, setData }) {
   const stop = () => {
     clearInterval(timerRef.current);
     clearInterval(sessionRef.current);
+    clearInterval(prepRef.current);
     cancelAnimationFrame(animFrameRef.current);
-    setActive(null); setPhase(0); setCount(0); setScale(0.08);
+    setActive(null); setPreparing(false); setPhase(0); setCount(0); setScale(0.08);
     setSessionLeft(sessionMins * 60); setSessionDone(false);
   };
 
@@ -912,7 +973,7 @@ function BreathingSection({ data, setData }) {
 
   // rAF loop for smooth scale animation
   useEffect(() => {
-    if (!active || !ex) return;
+    if (!active || !ex || preparing) return;
     const animate = (now) => {
       const elapsed = (now - phaseStartRef.current) / 1000;
       const dur = durations[phase];
@@ -937,7 +998,7 @@ function BreathingSection({ data, setData }) {
 
   // Phase ticker
   useEffect(() => {
-    if (!active || !ex) return;
+    if (!active || !ex || preparing) return;
     timerRef.current = setInterval(() => {
       setCount(c => {
         if (c + 1 >= durations[phase]) {
@@ -958,6 +1019,14 @@ function BreathingSection({ data, setData }) {
   const phaseName = ex ? ex.phases[phase] : "";
   const dur = ex ? durations[phase] : 4;
   const timeLeft = ex ? dur - count : 0;
+
+  // Phase colour scheme — distinct and visible
+  const PHASE_COLORS = {
+    Inhale: { ring: "120, 190, 255", label: "#a8d0ff", glow: "rgba(120,190,255,0.55)", bg1: "#0a2540", bg2: "#0d1a30" },
+    Hold:   { ring: "180, 150, 240", label: "#c9b6f5", glow: "rgba(180,150,240,0.5)",  bg1: "#1f1838", bg2: "#150f28" },
+    Exhale: { ring: "110, 220, 180", label: "#8fe6c4", glow: "rgba(110,220,180,0.5)",  bg1: "#0a2e28", bg2: "#0d1f1c" },
+  };
+  const pc = PHASE_COLORS[phaseName] || PHASE_COLORS.Inhale;
   const sessionPct = active ? ((sessionMins * 60 - sessionLeft) / (sessionMins * 60)) * 100 : 0;
   const sessionMinsLeft = Math.floor(sessionLeft / 60);
   const sessionSecsLeft = String(sessionLeft % 60).padStart(2, "0");
@@ -974,12 +1043,41 @@ function BreathingSection({ data, setData }) {
       {active && ex ? (
         <div style={{
           position: "fixed", inset: 0, zIndex: 100,
-          background: "linear-gradient(160deg, #0d2230 0%, #0a1a28 45%, #0e1820 75%, #130d1a 100%)",
+          background: `linear-gradient(160deg, ${preparing ? "#1a1420" : pc.bg1} 0%, ${preparing ? "#130d1a" : pc.bg2} 70%, #0a0810 100%)`,
           display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center",
-          overflow: "hidden",
+          overflow: "hidden", transition: "background 1.2s ease",
         }}>
 
+          {preparing ? (
+            /* 10-second preparation screen */
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", letterSpacing: 5, textTransform: "uppercase", marginBottom: 24 }}>
+                Get ready
+              </div>
+              <div style={{
+                width: 180, height: 180, borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 28,
+              }}>
+                <div style={{ color: "#fff", fontSize: 80, fontWeight: 200, fontFamily: "'DM Mono', monospace", lineHeight: 1, textShadow: "0 0 40px rgba(255,255,255,0.4)" }}>
+                  {prepLeft}
+                </div>
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 15, fontFamily: "'Newsreader', serif", fontStyle: "italic", textAlign: "center", maxWidth: 260 }}>
+                Settle in. Relax your shoulders and prepare to breathe with {ex.name}.
+              </div>
+              <button onClick={beginExercise} style={{
+                marginTop: 28, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 999, padding: "10px 24px", color: "rgba(255,255,255,0.8)", fontSize: 14,
+                fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+              }}>
+                Skip →
+              </button>
+            </div>
+          ) : (
+          <>
           {/* Session timer arc at top */}
           <div style={{ position: "absolute", top: 48, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
             <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 200, letterSpacing: 1 }}>
@@ -990,7 +1088,7 @@ function BreathingSection({ data, setData }) {
             </div>
           </div>
 
-          {/* Circles */}
+          {/* Circles — coloured by phase */}
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {rings.map((ring, i) => {
               const s = ring.size * scale;
@@ -999,19 +1097,19 @@ function BreathingSection({ data, setData }) {
                   position: "absolute",
                   width: s, height: s,
                   borderRadius: "50%",
-                  background: `radial-gradient(circle, rgba(170,200,218,${ring.opacity}) 0%, rgba(130,168,190,${ring.opacity * 0.5}) 55%, transparent 100%)`,
+                  background: `radial-gradient(circle, rgba(${pc.ring},${ring.opacity}) 0%, rgba(${pc.ring},${ring.opacity * 0.5}) 55%, transparent 100%)`,
                   transform: "translate(-50%, -50%)",
                   left: "50%", top: "50%",
-                  transition: "none",
+                  transition: "background 1s ease",
                 }} />
               );
             })}
             <div style={{ width: 290, height: 290, borderRadius: "50%", opacity: 0 }} />
             <div style={{ position: "absolute", inset: 0, zIndex: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0 }}>
-              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", letterSpacing: 5, textTransform: "uppercase", marginBottom: 6, transition: "opacity 0.4s" }}>
+              <div style={{ color: pc.label, fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", letterSpacing: 5, textTransform: "uppercase", marginBottom: 6, transition: "color 0.8s ease" }}>
                 {phaseName}
               </div>
-              <div style={{ color: "#ffffff", fontSize: 96, fontWeight: 200, fontFamily: "'DM Mono', monospace", lineHeight: 1, textShadow: "0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(180,210,230,0.3)", letterSpacing: -4 }}>
+              <div style={{ color: "#ffffff", fontSize: 96, fontWeight: 200, fontFamily: "'DM Mono', monospace", lineHeight: 1, textShadow: `0 0 40px ${pc.glow}, 0 0 80px ${pc.glow}`, letterSpacing: -4, transition: "text-shadow 0.8s ease" }}>
                 {timeLeft}
               </div>
             </div>
@@ -1023,29 +1121,34 @@ function BreathingSection({ data, setData }) {
               Cycle {cycles + 1}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              {ex.phases.map((p, i) => (
-                <div key={i} style={{
-                  padding: "4px 14px", borderRadius: 99, fontSize: 11,
-                  background: i === phase ? "oklch(0.86 0.01 80)" : "transparent",
-                  color: i === phase ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.2)",
-                  border: `1px solid ${i === phase ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.07)"}`,
-                  fontFamily: "'DM Sans', sans-serif", transition: "all 0.4s",
-                }}>
-                  {p} {Array.isArray(ex.duration) ? ex.duration[i] : ex.duration}s
-                </div>
-              ))}
+              {ex.phases.map((p, i) => {
+                const ppc = PHASE_COLORS[p] || PHASE_COLORS.Inhale;
+                return (
+                  <div key={i} style={{
+                    padding: "4px 14px", borderRadius: 99, fontSize: 11,
+                    background: i === phase ? `rgba(${ppc.ring},0.2)` : "transparent",
+                    color: i === phase ? ppc.label : "rgba(255,255,255,0.25)",
+                    border: `1px solid ${i === phase ? `rgba(${ppc.ring},0.5)` : "rgba(255,255,255,0.07)"}`,
+                    fontFamily: "'DM Sans', sans-serif", transition: "all 0.4s", fontWeight: i === phase ? 600 : 400,
+                  }}>
+                    {p} {Array.isArray(ex.duration) ? ex.duration[i] : ex.duration}s
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           <button onClick={stop} style={{
             position: "absolute", top: 52, right: 24,
-            background: "rgba(255,255,255,0.07)", border: "1px solid oklch(0.86 0.01 80)",
+            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
             borderRadius: 99, padding: "8px 18px",
             color: "rgba(255,255,255,0.5)", fontSize: 13,
             fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
           }}>
             Done
           </button>
+          </>
+          )}
         </div>
       ) : (
         <div>
@@ -1636,11 +1739,31 @@ function ReportsSection() {
     const getStatus = (item, daysTaken, startDate) => {
       const cycle = SUPPLEMENT_CYCLES[item.id];
       if (!cycle) return null;
+
+      const m = meta[item.id] || {};
+
+      // Voluntary manual break — count days since break started
+      if (m.manualBreak && m.manualBreakStart) {
+        const breakStart = new Date(m.manualBreakStart + "T12:00:00");
+        const breakElapsed = Math.max(0, Math.floor((new Date() - breakStart) / (1000 * 60 * 60 * 24)));
+        const target = cycle.courseDays === -1 ? null : cycle.breakDays;
+        const breakLeft = target ? Math.max(0, target - breakElapsed) : null;
+        const breakPct = target ? Math.min((breakElapsed / target) * 100, 100) : 100;
+        return {
+          type: "manualbreak",
+          color: "oklch(0.55 0.1 250)",
+          breakElapsed,
+          breakTotal: target,
+          breakLeft,
+          breakPct,
+          breakStartStr: breakStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        };
+      }
+
       if (cycle.courseDays === -1) return { type: "ongoing", color: "oklch(0.53 0.09 165)" };
       if (!startDate) return { type: "nodate", color: "oklch(0.58 0.012 90)" };
 
       if (daysTaken >= cycle.courseDays) {
-        // On break — count break days elapsed since course ended
         const courseEndDate = new Date(startDate + "T12:00:00");
         courseEndDate.setDate(courseEndDate.getDate() + cycle.courseDays);
         const breakElapsed = Math.floor((new Date() - courseEndDate) / (1000 * 60 * 60 * 24));
@@ -1650,13 +1773,9 @@ function ReportsSection() {
         resumeDate.setDate(resumeDate.getDate() + cycle.breakDays);
         const resumeStr = resumeDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
         return {
-          type: "break",
-          color: "oklch(0.58 0.15 25)",
-          breakElapsed: Math.max(0, breakElapsed),
-          breakTotal: cycle.breakDays,
-          breakLeft,
-          breakPct,
-          resumeDate: resumeStr,
+          type: "break", color: "oklch(0.58 0.15 25)",
+          breakElapsed: Math.max(0, breakElapsed), breakTotal: cycle.breakDays,
+          breakLeft, breakPct, resumeDate: resumeStr,
         };
       }
 
@@ -1677,30 +1796,47 @@ function ReportsSection() {
           const cycle = SUPPLEMENT_CYCLES[item.id];
           const status = getStatus(item, daysTaken, startDate);
 
+          const isBreakType = status?.type === "break" || status?.type === "manualbreak";
+          const showCounter = startDate || status?.type === "manualbreak";
           return (
             <div key={item.id} style={{
               marginBottom: 14, padding: "14px 16px", borderRadius: 14,
-              background: status?.type === "break" ? "oklch(0.58 0.15 25 / 0.05)" : "oklch(0.995 0.004 90)",
-              border: `1px solid ${status?.type === "break" ? "oklch(0.58 0.15 25 / 0.25)" : "oklch(0.91 0.006 80)"}`,
+              background: status?.type === "manualbreak" ? "oklch(0.55 0.1 250 / 0.05)" : status?.type === "break" ? "oklch(0.58 0.15 25 / 0.05)" : "oklch(0.995 0.004 90)",
+              border: `1px solid ${status?.type === "manualbreak" ? "oklch(0.55 0.1 250 / 0.3)" : status?.type === "break" ? "oklch(0.58 0.15 25 / 0.25)" : "oklch(0.91 0.006 80)"}`,
             }}>
 
-              {/* Name + days taken */}
+              {/* Name + days counter */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div style={{ flex: 1, paddingRight: 10 }}>
-                  <div style={{ color: status?.type === "break" ? "oklch(0.58 0.15 25)" : "oklch(0.36 0.015 80)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
+                  <div style={{ color: isBreakType ? status.color : "oklch(0.36 0.015 80)", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.3 }}>{item.name}</div>
                   <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11, marginTop: 2 }}>{item.dose}</div>
                 </div>
-                {startDate && (
+                {showCounter && (
                   <div style={{ textAlign: "center", flexShrink: 0 }}>
                     <div style={{ color: status?.color || "oklch(0.6 0.1 65)", fontSize: 26, fontFamily: "'DM Mono', monospace", fontWeight: 200, lineHeight: 1 }}>
-                      {status?.type === "break" ? status.breakElapsed : daysTaken}
+                      {isBreakType ? status.breakElapsed : daysTaken}
                     </div>
                     <div style={{ color: "oklch(0.72 0.01 90)", fontSize: 9, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                      {status?.type === "break" ? `of ${status.breakTotal} break days` : cycle?.courseDays > 0 ? `of ${cycle.courseDays} days` : "days"}
+                      {status?.type === "manualbreak" ? (status.breakTotal ? `of ${status.breakTotal} break days` : "break days") : status?.type === "break" ? `of ${status.breakTotal} break days` : cycle?.courseDays > 0 ? `of ${cycle.courseDays} days` : "days"}
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Manual break banner */}
+              {status?.type === "manualbreak" && (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ color: "oklch(0.5 0.1 250)", fontSize: 11, fontWeight: 600, marginBottom: 4 }}>⏸ Voluntary break · started {status.breakStartStr}</div>
+                  {status.breakTotal && (
+                    <div style={{ height: 6, background: "oklch(0.97 0.006 90)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
+                      <div style={{ height: "100%", width: status.breakPct + "%", background: "oklch(0.55 0.1 250)", borderRadius: 99, transition: "width 0.5s ease" }} />
+                    </div>
+                  )}
+                  <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 11 }}>
+                    {status.breakLeft != null ? `${status.breakLeft} days recommended left · resume anytime from Supplements tab` : "Resume anytime from the Supplements tab"}
+                  </div>
+                </div>
+              )}
 
               {/* Progress bar */}
               {startDate && status?.type === "active" && cycle?.courseDays > 0 && (
