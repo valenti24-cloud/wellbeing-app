@@ -994,7 +994,7 @@ function BreathingSection({ data, setData }) {
     };
     animFrameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [active, phase]);
+  }, [active, phase, preparing]);
 
   // Phase ticker
   useEffect(() => {
@@ -1014,7 +1014,7 @@ function BreathingSection({ data, setData }) {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [active, phase]);
+  }, [active, phase, preparing]);
 
   const phaseName = ex ? ex.phases[phase] : "";
   const dur = ex ? durations[phase] : 4;
