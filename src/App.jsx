@@ -549,7 +549,7 @@ function SupplementsSection({ data, setData }) {
               {group.items.map((item, idx) => {
                 const isTaken = taken.includes(item.id);
                 const onBreak = isOnBreak(item.id);
-                const canBreak = SUPPLEMENT_CYCLES[item.id] && SUPPLEMENT_CYCLES[item.id].courseDays !== -1;
+                const canBreak = true; // any supplement can be paused voluntarily
                 return (
                   <div key={item.id} style={{
                     padding: "13px 20px",
@@ -648,7 +648,7 @@ function NutritionSection({ data, setData }) {
             role: "user",
             content: [
               { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-              { type: "text", text: "Analyze this meal photo. Estimate the nutritional content for the full portion shown. Respond ONLY with a JSON object, no markdown, no other text, in exactly this format: {\"name\": \"short dish name (max 5 words)\", \"calories\": number, \"protein\": number, \"sugar\": number}. Calories in kcal, protein and sugar in grams, all as integers. Be realistic with portion sizes." }
+              { type: "text", text: "You are a nutritionist helping a woman optimise her diet for fertility and becoming pregnant. Analyze this meal photo. Estimate the nutrition for the full portion shown, and rate how good this meal is for fertility. Respond ONLY with a JSON object, no markdown, no other text, in exactly this format: {\"name\": \"short dish name (max 5 words)\", \"calories\": number, \"protein\": number, \"sugar\": number, \"rating\": \"fair\" | \"good\" | \"perfect\", \"tip\": \"one short fertility-focused tip (max 12 words)\"}. Calories in kcal, protein/sugar in grams as integers. Rate perfect for nutrient-dense fertility-supporting meals (leafy greens, healthy fats, quality protein, whole foods), good for balanced meals, fair for processed/high-sugar/low-nutrient meals. Be realistic with portions." }
             ]
           }]
         })
@@ -663,6 +663,8 @@ function NutritionSection({ data, setData }) {
         calories: String(parsed.calories || 0),
         protein: String(parsed.protein || 0),
         sugar: String(parsed.sugar || 0),
+        rating: parsed.rating || "good",
+        tip: parsed.tip || "",
       });
     } catch (err) {
       setPhotoError("Could not analyze photo. Try again or add manually.");
@@ -671,9 +673,9 @@ function NutritionSection({ data, setData }) {
   };
 
   const approveDraft = () => {
-    // Save ONLY the 3 figures + description. Photo/text already discarded (never stored).
+    // Save the 3 figures + description + fertility rating. Photo/text discarded.
     const cleanMeals = meals.filter(m => m.name || m.calories || m.protein || m.sugar);
-    setData({ ...data, meals: [...cleanMeals, { name: draft.name, calories: draft.calories, protein: draft.protein, sugar: draft.sugar }] });
+    setData({ ...data, meals: [...cleanMeals, { name: draft.name, calories: draft.calories, protein: draft.protein, sugar: draft.sugar, rating: draft.rating || "" }] });
     setDraft(null);
     setTextInput("");
   };
@@ -693,7 +695,7 @@ function NutritionSection({ data, setData }) {
           max_tokens: 1000,
           messages: [{
             role: "user",
-            content: "A person ate: \"" + textInput + "\". Estimate the nutrition for a standard typical portion of this food. Respond ONLY with a JSON object, no markdown, no other text, in exactly this format: {\"name\": \"short dish name (max 5 words)\", \"calories\": number, \"protein\": number, \"sugar\": number}. Calories in kcal, protein and sugar in grams, all integers. Use realistic standard restaurant/home portion sizes."
+            content: "You are a nutritionist helping a woman optimise her diet for fertility and becoming pregnant. A person ate: \"" + textInput + "\". Estimate the nutrition for a standard typical portion, and rate how good it is for fertility. Respond ONLY with a JSON object, no markdown, no other text, in exactly this format: {\"name\": \"short dish name (max 5 words)\", \"calories\": number, \"protein\": number, \"sugar\": number, \"rating\": \"fair\" | \"good\" | \"perfect\", \"tip\": \"one short fertility-focused tip (max 12 words)\"}. Calories in kcal, protein/sugar in grams as integers. Rate perfect for nutrient-dense fertility-supporting foods, good for balanced foods, fair for processed/high-sugar/low-nutrient foods. Use realistic standard portions."
           }]
         })
       });
@@ -707,6 +709,8 @@ function NutritionSection({ data, setData }) {
         calories: String(parsed.calories || 0),
         protein: String(parsed.protein || 0),
         sugar: String(parsed.sugar || 0),
+        rating: parsed.rating || "good",
+        tip: parsed.tip || "",
       });
     } catch (err) {
       setPhotoError("Could not estimate. Try again or add manually.");
@@ -835,6 +839,25 @@ function NutritionSection({ data, setData }) {
               style={{ ...textareaStyle, padding: "10px 12px", fontSize: 14, fontFamily: "'Newsreader', serif" }} />
           </div>
 
+          {/* Fertility rating badge */}
+          {draft.rating && (() => {
+            const r = draft.rating.toLowerCase();
+            const cfg = r === "perfect"
+              ? { label: "Perfect for fertility", color: "oklch(0.53 0.11 155)", bg: "oklch(0.53 0.11 155 / 0.1)", icon: "🌟" }
+              : r === "good"
+              ? { label: "Good choice", color: "oklch(0.58 0.1 130)", bg: "oklch(0.58 0.1 130 / 0.1)", icon: "✓" }
+              : { label: "Fair — room to improve", color: "oklch(0.64 0.13 60)", bg: "oklch(0.64 0.13 60 / 0.1)", icon: "○" };
+            return (
+              <div style={{ marginBottom: 14, padding: "12px 14px", background: cfg.bg, borderRadius: 14, border: "1px solid " + cfg.color.replace(")", " / 0.3)").replace("oklch(", "oklch(") }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 15 }}>{cfg.icon}</span>
+                  <span style={{ color: cfg.color, fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{cfg.label}</span>
+                </div>
+                {draft.tip && <div style={{ color: "oklch(0.5 0.015 80)", fontSize: 12.5, marginTop: 6, fontFamily: "'Newsreader', serif", fontStyle: "italic", lineHeight: 1.4 }}>{draft.tip}</div>}
+              </div>
+            );
+          })()}
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
             <div>
               <div style={{ color: "oklch(0.58 0.012 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>kcal</div>
@@ -865,23 +888,36 @@ function NutritionSection({ data, setData }) {
           <div key={i} style={{ color: "oklch(0.72 0.01 90)", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", paddingLeft: 2 }}>{h}</div>
         ))}
       </div>
-      {meals.map((m, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 6, marginBottom: 8 }}>
-          <input value={m.name} onChange={e => updateMeal(i, "name", e.target.value)}
-            placeholder={`Meal ${i + 1}`} style={{ ...textareaStyle, padding: "9px 10px", fontSize: 13 }} />
-          <input type="number" value={m.calories} onChange={e => updateMeal(i, "calories", e.target.value)}
-            placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
-          <input type="number" value={m.protein} onChange={e => updateMeal(i, "protein", e.target.value)}
-            placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
-          <input type="number" value={m.sugar} onChange={e => updateMeal(i, "sugar", e.target.value)}
-            placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
-          <button onClick={() => removeMeal(i)} style={{
-            width: 32, height: 38, borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)",
-            background: "rgba(239,68,68,0.06)", color: "oklch(0.58 0.15 25)", cursor: "pointer", fontSize: 15,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>×</button>
+      {meals.map((m, i) => {
+        const r = (m.rating || "").toLowerCase();
+        const dotColor = r === "perfect" ? "oklch(0.53 0.11 155)" : r === "good" ? "oklch(0.58 0.1 130)" : r === "fair" ? "oklch(0.64 0.13 60)" : null;
+        const ratingLabel = r === "perfect" ? "Perfect" : r === "good" ? "Good" : r === "fair" ? "Fair" : null;
+        return (
+        <div key={i} style={{ marginBottom: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 6 }}>
+            <input value={m.name} onChange={e => updateMeal(i, "name", e.target.value)}
+              placeholder={`Meal ${i + 1}`} style={{ ...textareaStyle, padding: "9px 10px", fontSize: 13 }} />
+            <input type="number" value={m.calories} onChange={e => updateMeal(i, "calories", e.target.value)}
+              placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
+            <input type="number" value={m.protein} onChange={e => updateMeal(i, "protein", e.target.value)}
+              placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
+            <input type="number" value={m.sugar} onChange={e => updateMeal(i, "sugar", e.target.value)}
+              placeholder="0" style={{ ...textareaStyle, padding: "9px 8px", fontSize: 13 }} />
+            <button onClick={() => removeMeal(i)} style={{
+              width: 32, height: 38, borderRadius: 8, border: "1px solid oklch(0.58 0.15 25 / 0.2)",
+              background: "oklch(0.58 0.15 25 / 0.06)", color: "oklch(0.58 0.15 25)", cursor: "pointer", fontSize: 15,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>×</button>
+          </div>
+          {ratingLabel && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, paddingLeft: 2 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: dotColor, display: "block" }} />
+              <span style={{ color: dotColor, fontSize: 11, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>{ratingLabel} for fertility</span>
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
       <button onClick={addMeal} style={{ ...ghostBtn, marginBottom: 24 }}>+ Add meal</button>
 
       <AIAdvice
